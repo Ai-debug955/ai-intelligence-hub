@@ -276,3 +276,11 @@ export async function fetchProfile() {
   if (!res.ok) throw new Error(data.error || 'Failed to fetch profile');
   return data.profile;
 }
+
+// ─── EXPORT ─────────────────────────────────────────────────────────
+export async function exportAllData() {
+  const res = await apiFetch('/admin/export');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to export data');
+  return data;
+}

@@ -171,4 +171,15 @@ router.post('/insights/bulk-upload', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true, inserted: count });
 });
 
+// GET /api/admin/export
+router.get('/export', requireAuth, requireAdmin, (_req, res) => {
+  const users         = db.prepare('SELECT id, name, email, role, active, created_at FROM users').all();
+  const insights      = db.prepare('SELECT * FROM insights').all();
+  const reviews       = db.prepare('SELECT * FROM reviews').all();
+  const reports       = db.prepare('SELECT * FROM reports').all();
+  const panel_signals = db.prepare('SELECT * FROM panel_signals').all();
+  const ai_logs       = db.prepare('SELECT * FROM ai_logs').all();
+  res.json({ users, insights, reviews, reports, panel_signals, ai_logs });
+});
+
 export default router;

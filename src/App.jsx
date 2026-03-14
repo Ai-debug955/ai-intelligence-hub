@@ -1432,6 +1432,25 @@ function AdminPanel({ insights = [], onRefresh }) {
   const [uploadErr, setUploadErr] = useState(""); const [uploadMsg, setUploadMsg] = useState("");
   const [uploading, setUploading] = useState(false);
 
+  // Export
+  const [exporting, setExporting] = useState(false);
+  const [exportErr, setExportErr] = useState("");
+
+  const handleExport = async () => {
+    setExporting(true); setExportErr("");
+    try {
+      const data = await api.exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai-hub-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { setExportErr(err.message); }
+    setExporting(false);
+  };
+
   const pendingInsights = insights.filter(i => i.needs_review);
 
   useEffect(() => {
@@ -1537,6 +1556,15 @@ function AdminPanel({ insights = [], onRefresh }) {
         <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-muted)"}}>
           {new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})} UTC
         </span>
+        {me?.role === "admin" && (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+            <button className="btn-secondary" onClick={handleExport} disabled={exporting}
+              style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
+              {exporting ? "Exporting…" : "Export Data"}
+            </button>
+            {exportErr && <span style={{fontSize:11,color:"#ff4d6a",fontFamily:"'JetBrains Mono',monospace"}}>{exportErr}</span>}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
