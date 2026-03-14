@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"ruturaj@company.com\"\",\"\"password\"\":\"\"admin123\"\"}')",
+      "Bash(curl -sv http://localhost:3001/api/profile -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6IlJ1dHVyYWoiLCJlbWFpbCI6InJ1dHVyYWpAY29tcGFueS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzM0MDUzNzEsImV4cCI6MTc3NDAxMDE3MX0.9D3txAbzPwwX2RANGtgXqiFfzAhRFLC5b0do8r9muKE\")",
+      "Bash(xargs kill:*)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(node -e \":*)",
+      "Bash(python3:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6IlJ1dHVyYWoiLCJlbWFpbCI6InJ1dHVyYWpAY29tcGFueS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzM1MDk4MTksImV4cCI6MTc3MzUxMzQxOX0.NxdijeNbjP_pdjmBN7kxMNd2uGw5-fAZWAuFvel19vM\")",
+      "Bash(__NEW_LINE_57e5c45513b5cc22__ echo:*)",
+      "Bash(curl -s http://localhost:3001/api/admin/stats -H \"Authorization: Bearer $TOKEN\")",
+      "Bash(curl -s http://localhost:3001/api/admin/users -H \"Authorization: Bearer $TOKEN\")"
+    ]
+  }
+}
