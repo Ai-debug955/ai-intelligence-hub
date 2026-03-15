@@ -284,3 +284,14 @@ export async function exportAllData() {
   if (!res.ok) throw new Error(data.error || 'Failed to export data');
   return data;
 }
+
+// ─── IMPORT ─────────────────────────────────────────────────────────
+export async function importAllData(payload) {
+  const res = await apiFetch('/admin/import', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to import data');
+  return data;
+}

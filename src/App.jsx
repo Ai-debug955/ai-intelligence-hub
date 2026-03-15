@@ -1436,6 +1436,42 @@ function AdminPanel({ insights = [], onRefresh }) {
   const [exporting, setExporting] = useState(false);
   const [exportErr, setExportErr] = useState("");
 
+  // Import
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const [importErr, setImportErr] = useState("");
+
+  const handleImport = () => {
+    setImportMsg(""); setImportErr("");
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      let parsed;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch { setImportErr("Invalid JSON file"); return; }
+      const { insights = [], reviews = [], reports = [], panel_signals = [], ai_logs = [] } = parsed;
+      if (!insights.length && !reviews.length && !reports.length && !panel_signals.length && !ai_logs.length) {
+        setImportErr("File must contain at least one of: insights, reviews, reports, panel_signals, ai_logs"); return;
+      }
+      const ok = window.confirm(
+        `This will replace all existing data (except users).\n\nImport: ${insights.length} insights, ${reports.length} reports, ${panel_signals.length} signals, ${reviews.length} reviews, ${ai_logs.length} AI logs?\n\nContinue?`
+      );
+      if (!ok) return;
+      setImporting(true);
+      try {
+        const res = await api.importAllData({ insights, reviews, reports, panel_signals, ai_logs });
+        setImportMsg(`✓ Imported: ${res.counts.insights} insights, ${res.counts.reports} reports, ${res.counts.panel_signals} signals`);
+        setTimeout(() => window.location.reload(), 1200);
+      } catch (err) { setImportErr(err.message); }
+      setImporting(false);
+    };
+    input.click();
+  };
+
   const handleExport = async () => {
     setExporting(true); setExportErr("");
     try {
@@ -1558,10 +1594,18 @@ function AdminPanel({ insights = [], onRefresh }) {
         </span>
         {me?.role === "admin" && (
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-            <button className="btn-secondary" onClick={handleExport} disabled={exporting}
-              style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
-              {exporting ? "Exporting…" : "Export Data"}
-            </button>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn-secondary" onClick={handleImport} disabled={importing}
+                style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
+                {importing ? "Importing…" : "Import Data"}
+              </button>
+              <button className="btn-secondary" onClick={handleExport} disabled={exporting}
+                style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
+                {exporting ? "Exporting…" : "Export Data"}
+              </button>
+            </div>
+            {importMsg && <span style={{fontSize:11,color:"var(--accent-green)",fontFamily:"'JetBrains Mono',monospace"}}>{importMsg}</span>}
+            {importErr && <span style={{fontSize:11,color:"#ff4d6a",fontFamily:"'JetBrains Mono',monospace"}}>{importErr}</span>}
             {exportErr && <span style={{fontSize:11,color:"#ff4d6a",fontFamily:"'JetBrains Mono',monospace"}}>{exportErr}</span>}
           </div>
         )}

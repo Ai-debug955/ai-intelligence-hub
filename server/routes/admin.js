@@ -171,6 +171,39 @@ router.post('/insights/bulk-upload', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true, inserted: count });
 });
 
+// POST /api/admin/import
+router.post('/import', requireAuth, requireAdmin, (req, res) => {
+  const { insights = [], reviews = [], reports = [], panel_signals = [], ai_logs = [] } = req.body;
+  try {
+    const run = db.transaction(() => {
+      db.prepare('DELETE FROM ai_logs').run();
+      db.prepare('DELETE FROM panel_signals').run();
+      db.prepare('DELETE FROM reports').run();
+      db.prepare('DELETE FROM reviews').run();
+      db.prepare('DELETE FROM insights').run();
+
+      const insStmt = db.prepare('INSERT INTO insights (id, title, summary, description, category, impact, tags, sources, key_points, submitted_by, reviewed_by, created_at, needs_review, entry_type, reviewer_notes, reviewed_at) VALUES (@id, @title, @summary, @description, @category, @impact, @tags, @sources, @key_points, @submitted_by, @reviewed_by, @created_at, @needs_review, @entry_type, @reviewer_notes, @reviewed_at)');
+      for (const row of insights) insStmt.run(row);
+
+      const revStmt = db.prepare('INSERT INTO reviews (insight_id, reviewer, summary, key_points, review_date) VALUES (@insight_id, @reviewer, @summary, @key_points, @review_date)');
+      for (const row of reviews) revStmt.run(row);
+
+      const repStmt = db.prepare('INSERT INTO reports (report_content, generated_at, generated_by) VALUES (@report_content, @generated_at, @generated_by)');
+      for (const row of reports) repStmt.run(row);
+
+      const sigStmt = db.prepare('INSERT INTO panel_signals (title, url, panel, added_by, created_at) VALUES (@title, @url, @panel, @added_by, @created_at)');
+      for (const row of panel_signals) sigStmt.run(row);
+
+      const logStmt = db.prepare('INSERT INTO ai_logs (type, tokens, actor, created_at) VALUES (@type, @tokens, @actor, @created_at)');
+      for (const row of ai_logs) logStmt.run(row);
+    });
+    run();
+    res.json({ success: true, counts: { insights: insights.length, reviews: reviews.length, reports: reports.length, panel_signals: panel_signals.length, ai_logs: ai_logs.length } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/admin/export
 router.get('/export', requireAuth, requireAdmin, (_req, res) => {
   const users         = db.prepare('SELECT id, name, email, role, active, created_at FROM users').all();
