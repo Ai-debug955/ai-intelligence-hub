@@ -5,8 +5,8 @@ const CATEGORIES = ["Model", "Tool", "Paper", "Use Case", "News", "Other"];
 const IMPACTS = ["High", "Medium", "Low", "Other"];
 const ENTRY_TYPES = [
   { id: "intelligence", label: "Intelligence", icon: "◈", desc: "Regular intelligence feed", color: "var(--accent-cyan)" },
-  { id: "ai_signal", label: "AI Signal Stream", icon: "◆", desc: "Left panel — AI signals", color: "var(--accent-blue)" },
-  { id: "financial_ai", label: "Financial AI", icon: "$", desc: "Right panel — Financial AI", color: "var(--accent-green)" }
+  { id: "ai_signal", label: "Core AI", icon: "◆", desc: "Core AI panel signals", color: "var(--accent-blue)" },
+  { id: "financial_ai", label: "Fin AI", icon: "$", desc: "Fin AI panel signals", color: "var(--accent-green)" }
 ];
 const CATEGORY_ICONS = { Model: "◆", Tool: "⚙", Paper: "◎", "Use Case": "△", News: "▣", Other: "◇" };
 
@@ -2076,6 +2076,29 @@ export default function App() {
   const handleLogin = (u) => { setUser(u); setLoadingData(true); };
   const handleLogout = () => { api.logout(); setUser(null); setData([]); setPage("dashboard"); };
 
+  // Combine insights with panel signals so Core AI / Fin AI filters show their panel data
+  const allIntelligence = useMemo(() => {
+    const sigToInsight = (s, panel) => ({
+      id: `sig-${s.id}`,
+      title: s.title,
+      urls: [s.url],
+      entry_type: panel,
+      category: 'Other',
+      impact: 'Other',
+      needs_review: false,
+      submitted_by: s.added_by || '',
+      created_at: s.created_at,
+      summary: '',
+      tags: '',
+      key_points: '',
+    });
+    return [
+      ...data,
+      ...aiDbSignals.map(s => sigToInsight(s, 'ai_signal')),
+      ...finDbSignals.map(s => sigToInsight(s, 'financial_ai')),
+    ];
+  }, [data, aiDbSignals, finDbSignals]);
+
   // Not logged in → show login page
   if (!user) return <LoginPage onLogin={handleLogin} />;
 
@@ -2149,7 +2172,7 @@ export default function App() {
           </div>}
           {page!=="dashboard"&&<>
           {page==="add"&&<AddInsight onAdd={i=>{setData(p=>[i,...p])}}/>}
-          {page==="database"&&<InsightsTable key={filterKey} insights={data} onSelect={i=>{setSel(i);setPage("detail")}} initialFilters={dbFilters} isAdmin={user.role==="admin"} onBulkDelete={handleBulkDeleteInsights}/>}
+          {page==="database"&&<InsightsTable key={filterKey} insights={allIntelligence} onSelect={i=>{setSel(i);setPage("detail")}} initialFilters={dbFilters} isAdmin={user.role==="admin"} onBulkDelete={handleBulkDeleteInsights}/>}
           {page==="detail"&&sel&&<InsightDetail insight={sel} isAdmin={user.role==="admin"} onBack={()=>setPage("database")} onUpdate={async u=>{
             try {
               const updated = await api.updateInsight(u.id, u);
