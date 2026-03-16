@@ -883,25 +883,33 @@ function Dashboard({ insights, onSelect, onNavigateFiltered }) {
 function AddInsight({ onAdd }) {
   const [urls,setUrls]=useState([""]);const[title,setTitle]=useState("");const[description,setDescription]=useState("");
   const [category,setCategory]=useState("Other");const[isHighImpact,setIsHighImpact]=useState(false);const[tags,setTags]=useState("");
-  const [showOpt,setShowOpt]=useState(false);const[toast,setToast]=useState(false);
+  const [showOpt,setShowOpt]=useState(false);const[toast,setToast]=useState(false);const[toastMsg,setToastMsg]=useState("");
+  const [autoReview,setAutoReview]=useState(true);const[isSubmitting,setIsSubmitting]=useState(false);
   const addUrl=()=>setUrls(u=>[...u,""]);const removeUrl=i=>setUrls(u=>u.filter((_,j)=>j!==i));
   const updateUrl=(i,v)=>setUrls(u=>u.map((x,j)=>j===i?v:x));const validUrls=urls.filter(u=>u.trim());
   const handleSubmit=async()=>{
     if(validUrls.length===0&&!title.trim())return;
+    if(isSubmitting)return;
+    setIsSubmitting(true);
     try {
-      const insight = await api.submitInsight({
+      const result = await api.submitInsight({
         title:title.trim()||validUrls[0]||"Untitled",
         urls:validUrls,
         category,
         impact:isHighImpact?"High":"Other",
         tags:tags.trim(),
         description:description.trim(),
-        entry_type:"intelligence"
+        entry_type:"intelligence",
+        autoReview
       });
-      onAdd(insight);
+      onAdd(result.insight);
       setUrls([""]);setTitle("");setDescription("");setCategory("Other");setIsHighImpact(false);setTags("");setShowOpt(false);
-      setToast(true);setTimeout(()=>setToast(false),3000);
+      let msg="✓ Submitted! Will be reviewed and published.";
+      if(autoReview&&result.autoReviewed)msg="✓ Auto-reviewed and published by AI!";
+      else if(autoReview&&!result.autoReviewed&&validUrls.length>0)msg="✓ Submitted! AI couldn't fully extract content — sent to manual review.";
+      setToastMsg(msg);setToast(true);setTimeout(()=>setToast(false),4000);
     } catch (err) { console.error('Submit failed:', err); }
+    finally { setIsSubmitting(false); }
   };
   return (
     <div className="fade-in">
@@ -930,9 +938,17 @@ function AddInsight({ onAdd }) {
             <span>🔴 Mark as <strong style={{color:"#ff4d6a"}}>High Impact</strong> <span style={{color:"var(--text-muted)",fontSize:12}}>— only for significant developments</span></span>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={validUrls.length===0&&!title.trim()}>📋 Submit Intelligence</button>
+        <div className="form-group" style={{marginTop:8}}>
+          <div className="toggle-row" onClick={()=>setAutoReview(!autoReview)}>
+            <div className={`toggle-box ${autoReview?"checked":""}`} style={autoReview?{borderColor:"var(--accent-cyan)",background:"var(--accent-cyan)"}:{}}>{autoReview?"✓":""}</div>
+            <span>🤖 <strong style={{color:"var(--accent-cyan)"}}>Auto-Review with AI</strong> <span style={{color:"var(--text-muted)",fontSize:12}}>— AI will extract content and generate a review. Turn off for manual review queue.</span></span>
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={isSubmitting||(validUrls.length===0&&!title.trim())}>
+          {isSubmitting?<><span className="spinner"/> {autoReview?"Submitting & reviewing...":"Submitting..."}</>:"📋 Submit Intelligence"}
+        </button>
       </div>
-      {toast&&<div className="toast">✓ Submitted! Will be reviewed and published.</div>}
+      {toast&&<div className="toast">{toastMsg}</div>}
     </div>
   );
 }
@@ -1033,6 +1049,8 @@ function InsightDetail({ insight, onBack, onUpdate, onDelete, isAdmin }) {
   const [editToast, setEditToast] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [autoReviewing, setAutoReviewing] = useState(false);
+  const [autoReviewError, setAutoReviewError] = useState("");
   const points = (insight.key_points || "").split(";").filter(Boolean);
 
   useEffect(() => {
@@ -1091,6 +1109,19 @@ function InsightDetail({ insight, onBack, onUpdate, onDelete, isAdmin }) {
     setEditSaving(false);
     setEditToast(true);
     setTimeout(() => setEditToast(false), 2500);
+  };
+
+  const handleAutoReview = async () => {
+    setAutoReviewing(true);
+    setAutoReviewError("");
+    try {
+      const updated = await api.autoReviewInsight(insight.id);
+      onUpdate(updated);
+    } catch (err) {
+      setAutoReviewError(err.message || "Auto-review failed");
+    } finally {
+      setAutoReviewing(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -1201,6 +1232,13 @@ function InsightDetail({ insight, onBack, onUpdate, onDelete, isAdmin }) {
       {insight.needs_review && (
         <div className="admin-form">
           <div className="admin-form-title">🔍 Review Panel</div>
+          <div style={{marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <button className="btn btn-primary btn-sm" onClick={handleAutoReview} disabled={autoReviewing}>
+              {autoReviewing?<><span className="spinner"/> Auto-reviewing...</>:"🤖 Auto-Review with AI"}
+            </button>
+            <span style={{fontSize:12,color:"var(--text-muted)"}}>— or fill in the form below to review manually</span>
+          </div>
+          {autoReviewError&&<div style={{fontSize:12,color:"var(--accent-red)",marginBottom:12,padding:"8px 12px",background:"rgba(239,68,68,0.08)",borderRadius:8,border:"1px solid rgba(239,68,68,0.2)"}}>{autoReviewError}</div>}
           {insight.description && (
             <div style={{marginBottom:16,padding:"12px 16px",background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.15)",borderRadius:8}}>
               <div style={{fontSize:11,color:"var(--accent-purple)",fontWeight:600,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>Submitter's Notes</div>

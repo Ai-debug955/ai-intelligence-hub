@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
+import { getFullContent } from '../scraper.js';
+import { groqChat } from '../groq.js';
 
 const router = Router();
+
+const truncateText = (text, maxLen) => text && text.length > maxLen ? text.slice(0, maxLen) + '... [truncated]' : text;
 
 // GET /api/insights — list all insights (with optional filters)
 router.get('/', requireAuth, (req, res) => {
@@ -49,9 +53,9 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/insights — submit new insight
-router.post('/', requireAuth, (req, res) => {
-  const { id, title, urls, category, impact, tags, description, entry_type } = req.body;
-  const insightId = id || Math.random().toString(36).substr(2, 9);
+router.post('/', requireAuth, async (req, res) => {
+  const { id, title, urls, category, impact, tags, description, entry_type, autoReview = true } = req.body;
+  const insightId = id || Math.random().toString(36).substring(2, 11);
 
   if (!title && (!urls || urls.length === 0)) {
     return res.status(400).json({ error: 'Title or at least one URL required' });
@@ -73,13 +77,104 @@ router.post('/', requireAuth, (req, res) => {
     entry_type || 'intelligence'
   );
 
+  // ── Auto-review (optional, default ON) ─────────────────────────────
+  let autoReviewed = false;
+
+  if (autoReview && urls && urls.length > 0) {
+    try {
+      const extracted = await getFullContent(urls[0]);
+
+      if (extracted.extractionSuccess) {
+        const systemMsg = 'You are an AI analyst. Return only valid JSON, no markdown.';
+        const userMsg = `Platform: ${extracted.platform}. Author: ${extracted.author || 'Unknown'}.
+URL: ${urls[0]}
+
+Content: ${truncateText(extracted.mainContent, 400)}
+
+Linked: ${truncateText(extracted.linkedContent, 150) || 'none'}
+
+Notes: ${description || 'none'}
+
+Return JSON:
+{"summary":"5-6 sentence summary","key_points":["pt1","pt2","pt3"],"suggested_title":"title","suggested_category":"Model(new AI model/weights/architecture/benchmark result)|Tool(library/API/product/app/framework)|Paper(research paper/preprint/study/dataset)|Use Case(real-world deployment/integration/application of AI)|News(company news/funding/acquisition/policy/regulation)|Other","suggested_impact":"High(only if major breakthrough, paradigm shift, or critical industry event — otherwise leave blank)","confidence":0.0}`;
+
+        const { content: aiText, tokens } = await groqChat(
+          [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+          0.3
+        );
+
+        if (aiText) {
+          let parsed;
+          try {
+            const match = aiText.match(/\{[\s\S]*\}/);
+            parsed = JSON.parse(match[0]);
+          } catch {
+            parsed = null;
+          }
+
+          if (parsed && typeof parsed.confidence === 'number' && parsed.confidence >= 0.7) {
+            // High-confidence auto-publish
+            const useTitle = (!title || title === urls[0]) ? (parsed.suggested_title || title || urls[0]) : title;
+            const useCategory = (category === 'Other' || !category) ? (parsed.suggested_category?.split('|')[0].trim() || 'Other') : category;
+            const useImpact = (impact === 'Other' || !impact) ? (parsed.suggested_impact?.trim().startsWith('High') ? 'High' : 'Other') : impact;
+
+            const kpString = Array.isArray(parsed.key_points) ? parsed.key_points.join(';') : (parsed.key_points || '');
+
+            db.prepare(`
+              UPDATE insights SET
+                title = ?,
+                summary = ?,
+                key_points = ?,
+                category = ?,
+                impact = ?,
+                needs_review = 0,
+                reviewed_by = 'AI Auto-Review',
+                reviewer_notes = 'Auto-reviewed from extracted content'
+              WHERE id = ?
+            `).run(
+              useTitle,
+              parsed.summary || '',
+              kpString,
+              useCategory,
+              useImpact,
+              insightId
+            );
+
+            autoReviewed = true;
+
+            // Insert review record to match manual review workflow
+            db.prepare(`
+              INSERT INTO reviews (insight_id, reviewer, summary, key_points)
+              VALUES (?, ?, ?, ?)
+            `).run(insightId, 'AI Auto-Review', parsed.summary || '', kpString);
+          } else {
+            // Low confidence — store extracted content in description for the manual reviewer
+            db.prepare('UPDATE insights SET description = ? WHERE id = ?').run(
+              `[Auto-extraction attempted — low confidence]\n\n${extracted.mainContent.substring(0, 1000)}\n\n---\nOriginal notes: ${description || ''}`,
+              insightId
+            );
+          }
+
+          if (tokens > 0) {
+            db.prepare('INSERT INTO ai_logs (type, tokens, actor) VALUES (?, ?, ?)').run('summary', tokens, req.user.name);
+          }
+        }
+      }
+    } catch (err) {
+      // Auto-review failure is non-fatal — insight stays in manual queue
+      console.error('Auto-review error:', err);
+    }
+  }
+  // ── End auto-review ─────────────────────────────────────────────────
+
   const insight = db.prepare('SELECT * FROM insights WHERE id = ?').get(insightId);
   res.status(201).json({
     insight: {
       ...insight,
       urls: JSON.parse(insight.sources || '[]'),
       needs_review: !!insight.needs_review
-    }
+    },
+    autoReviewed
   });
 });
 
@@ -141,6 +236,99 @@ router.put('/:id', requireAuth, (req, res) => {
       needs_review: !!updated.needs_review
     }
   });
+});
+
+// POST /api/insights/:id/auto-review — run auto-review pipeline on an existing pending insight
+router.post('/:id/auto-review', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const existing = db.prepare('SELECT * FROM insights WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Insight not found' });
+  if (!existing.needs_review) return res.status(400).json({ error: 'Insight is already reviewed' });
+
+  const urls = JSON.parse(existing.sources || '[]');
+  if (!urls || urls.length === 0) return res.status(400).json({ error: 'No URL to extract content from' });
+
+  try {
+    const extracted = await getFullContent(urls[0]);
+    if (!extracted.extractionSuccess) {
+      return res.status(422).json({ error: 'Could not extract enough content from the URL' });
+    }
+
+    const systemMsg = 'You are an AI analyst. Return only valid JSON, no markdown.';
+    const userMsg = `Platform: ${extracted.platform}. Author: ${extracted.author || 'Unknown'}.
+URL: ${urls[0]}
+
+Content: ${truncateText(extracted.mainContent, 400)}
+
+Linked: ${truncateText(extracted.linkedContent, 150) || 'none'}
+
+Notes: ${existing.description || 'none'}
+
+Return JSON:
+{"summary":"5-6 sentence summary","key_points":["pt1","pt2","pt3"],"suggested_title":"title","suggested_category":"Model(new AI model/weights/architecture/benchmark result)|Tool(library/API/product/app/framework)|Paper(research paper/preprint/study/dataset)|Use Case(real-world deployment/integration/application of AI)|News(company news/funding/acquisition/policy/regulation)|Other","suggested_impact":"High(only if major breakthrough, paradigm shift, or critical industry event — otherwise leave blank)","confidence":0.0}`;
+
+    const { content: aiText, tokens } = await groqChat(
+      [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+      0.3
+    );
+
+    if (!aiText) return res.status(500).json({ error: 'AI returned no response. Check GROQ_API_KEY.' });
+
+    let parsed;
+    try {
+      const match = aiText.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(match[0]);
+    } catch {
+      return res.status(500).json({ error: 'Failed to parse AI response' });
+    }
+
+    if (typeof parsed.confidence !== 'number' || parsed.confidence < 0.7) {
+      return res.status(422).json({ error: `AI confidence too low (${parsed.confidence ?? 'unknown'}) — use manual review instead` });
+    }
+
+    const currentTitle = existing.title;
+    const currentCategory = existing.category;
+    const currentImpact = existing.impact;
+
+    const useTitle = (!currentTitle || currentTitle === urls[0]) ? (parsed.suggested_title || currentTitle) : currentTitle;
+    const useCategory = (currentCategory === 'Other' || !currentCategory) ? (parsed.suggested_category?.split('|')[0].trim() || 'Other') : currentCategory;
+    const useImpact = (currentImpact === 'Other' || !currentImpact) ? (parsed.suggested_impact?.trim().startsWith('High') ? 'High' : 'Other') : currentImpact;
+    const kpString = Array.isArray(parsed.key_points) ? parsed.key_points.join(';') : (parsed.key_points || '');
+
+    db.prepare(`
+      UPDATE insights SET
+        title = ?,
+        summary = ?,
+        key_points = ?,
+        category = ?,
+        impact = ?,
+        needs_review = 0,
+        reviewed_by = 'AI Auto-Review',
+        reviewer_notes = 'Auto-reviewed from extracted content'
+      WHERE id = ?
+    `).run(useTitle, parsed.summary || '', kpString, useCategory, useImpact, id);
+
+    db.prepare(`
+      INSERT INTO reviews (insight_id, reviewer, summary, key_points)
+      VALUES (?, ?, ?, ?)
+    `).run(id, 'AI Auto-Review', parsed.summary || '', kpString);
+
+    if (tokens > 0) {
+      db.prepare('INSERT INTO ai_logs (type, tokens, actor) VALUES (?, ?, ?)').run('summary', tokens, req.user.name);
+    }
+
+    const updated = db.prepare('SELECT * FROM insights WHERE id = ?').get(id);
+    res.json({
+      insight: {
+        ...updated,
+        urls: JSON.parse(updated.sources || '[]'),
+        needs_review: !!updated.needs_review
+      }
+    });
+  } catch (err) {
+    console.error('Auto-review error:', err);
+    res.status(500).json({ error: 'Auto-review failed' });
+  }
 });
 
 // DELETE /api/insights — bulk delete (admin only)

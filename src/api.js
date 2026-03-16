@@ -92,6 +92,14 @@ export async function submitInsight(insight) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to submit insight');
+  // Return full response so caller can check data.autoReviewed
+  return data;
+}
+
+export async function autoReviewInsight(id) {
+  const res = await apiFetch(`/insights/${id}/auto-review`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Auto-review failed');
   return data.insight;
 }
 
