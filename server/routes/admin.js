@@ -100,9 +100,13 @@ router.get('/activity', requireAuth, requireAdmin, (req, res) => {
     FROM reports ORDER BY generated_at DESC LIMIT 10
   `).all();
 
+  const normalizeTs = ts =>
+    ts && !ts.endsWith('Z') && !ts.includes('+') ? ts.replace(' ', 'T') + 'Z' : ts;
+
   const feed = [...submissions, ...reviews, ...reports]
     .sort((a, b) => new Date(b.ts) - new Date(a.ts))
-    .slice(0, 30);
+    .slice(0, 30)
+    .map(item => ({ ...item, ts: normalizeTs(item.ts) }));
 
   res.json({ activity: feed });
 });

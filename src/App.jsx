@@ -455,6 +455,16 @@ tbody tr{cursor:pointer;transition:background 0.15s}tbody tr:hover{background:va
 .user-action-btn.promote:hover{border-color:rgba(6,214,224,0.4);color:var(--accent-cyan);background:rgba(6,214,224,0.05)}
 .user-inactive{opacity:0.45}
 .publish-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:14px}
+.signal-item{cursor:grab}.signal-item:active{cursor:grabbing}
+.nav-item.drag-over{background:rgba(6,214,224,0.1)!important;border:1px dashed var(--accent-cyan)!important;color:var(--accent-cyan)!important;animation:nav-pulse 1.5s ease infinite}
+@keyframes nav-pulse{0%,100%{box-shadow:0 0 10px rgba(6,214,224,0.1)}50%{box-shadow:0 0 24px rgba(6,214,224,0.3)}}
+.drag-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--bg-card);border:1px solid var(--border-glow);border-radius:12px;padding:14px 24px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.45);animation:drag-toast-in 0.25s ease;display:flex;align-items:center;gap:10px;white-space:nowrap;pointer-events:none}
+@keyframes drag-toast-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+.dashboard-drop-overlay{position:fixed;inset:0;background:rgba(6,214,224,0.03);border:2px dashed rgba(6,214,224,0.35);display:flex;align-items:center;justify-content:center;z-index:200;pointer-events:none;animation:fadeIn 0.2s ease}
+.dashboard-drop-overlay-inner{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:16px;padding:28px 48px;text-align:center;box-shadow:0 0 40px rgba(6,214,224,0.15)}
+.dashboard-drop-overlay-icon{font-size:32px;margin-bottom:8px}
+.dashboard-drop-overlay-text{font-size:16px;font-weight:600;color:var(--accent-cyan);letter-spacing:-0.3px}
+.dashboard-drop-overlay-sub{font-size:12px;color:var(--text-muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
 `;
 
 function SourceBadge({ url, small }) {
@@ -781,7 +791,7 @@ function SignalStreamPanel({ title, signals, dbSignals, panelId, accentColor, si
                 </div>
               </div>
             ) : (
-              <div key={i} className="signal-item" onClick={()=>window.open(sig.url,'_blank','noopener,noreferrer')} style={{cursor:"pointer"}}>
+              <div key={i} className="signal-item" draggable="true" onDragStart={e=>{e.dataTransfer.setData('application/json',JSON.stringify({title:sig.title,url:sig.url,panel:panelId}));e.dataTransfer.effectAllowed='copy';}} onClick={()=>window.open(sig.url,'_blank','noopener,noreferrer')}>
                 <div className="signal-item-icon" style={{background: sig.color}}>{sig.icon}</div>
                 <div className="signal-item-body">
                   <div className="signal-item-title">{sig.title}</div>
@@ -2056,6 +2066,10 @@ export default function App() {
   const [loadingData, setLoadingData] = useState(true);
   const [aiDbSignals, setAiDbSignals] = useState([]);
   const [finDbSignals, setFinDbSignals] = useState([]);
+  const [dragOverNav, setDragOverNav] = useState(false);
+  const [dragOverDashboard, setDragOverDashboard] = useState(false);
+  const [dragSubmitting, setDragSubmitting] = useState(false);
+  const [dragToast, setDragToast] = useState(null);
 
   // Fetch insights from API when logged in
   const refreshData = useCallback(async () => {
@@ -2096,6 +2110,32 @@ export default function App() {
     if (panelId === 'ai_signal') setAiDbSignals(prev => prev.filter(s => !ids.includes(s.id)));
     else setFinDbSignals(prev => prev.filter(s => !ids.includes(s.id)));
   }, []);
+
+  const handleDragSubmit = useCallback(async (signalData) => {
+    if (dragSubmitting) return;
+    setDragSubmitting(true);
+    setDragToast({ msg: `🔄 Auto-reviewing: ${signalData.title.slice(0, 45)}…` });
+    try {
+      const result = await api.submitInsight({
+        title: signalData.title,
+        urls: [signalData.url],
+        category: 'Other',
+        impact: 'Other',
+        tags: '',
+        description: `Auto-submitted from ${signalData.panel === 'ai_signal' ? 'Core AI' : 'Fin AI'} signal panel`,
+        entry_type: 'intelligence',
+        autoReview: true,
+      });
+      setData(prev => [result.insight, ...prev]);
+      const t = (result.insight?.title || signalData.title).slice(0, 45);
+      setDragToast({ msg: result.autoReviewed ? `✅ Auto-reviewed: ${t}` : `📋 Queued for review: ${t}` });
+    } catch (err) {
+      setDragToast({ msg: `❌ Failed: ${err.message}` });
+    } finally {
+      setDragSubmitting(false);
+      setTimeout(() => setDragToast(null), 4000);
+    }
+  }, [dragSubmitting]);
 
   const handleBulkDeleteInsights = useCallback(async (ids) => {
     await api.bulkDeleteInsights(ids);
@@ -2174,9 +2214,17 @@ export default function App() {
       <div className="sidebar">
         <div className="sidebar-logo"><div className="logo-icon">AI</div><div><div className="logo-text">Intelligence Hub</div><div className="logo-sub">AI Research Ops</div></div></div>
         <div className="sidebar-nav">{NAV.map(n=>(
-          <div key={n.id} className={`nav-item ${page===n.id?"active":""}`} onClick={()=>{nav(n.id);if(n.id==="database"){setDbFilters({});setFilterKey(k=>k+1)}}}>
+          <div key={n.id}
+            className={`nav-item ${page===n.id?"active":""}${n.id==="add"&&dragOverNav?" drag-over":""}`}
+            onClick={()=>{nav(n.id);if(n.id==="database"){setDbFilters({});setFilterKey(k=>k+1)}}}
+            onDragOver={n.id==="add"?e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}:undefined}
+            onDragEnter={n.id==="add"?e=>{e.preventDefault();setDragOverNav(true);}:undefined}
+            onDragLeave={n.id==="add"?e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOverNav(false);}:undefined}
+            onDrop={n.id==="add"?e=>{e.preventDefault();setDragOverNav(false);try{handleDragSubmit(JSON.parse(e.dataTransfer.getData('application/json')));}catch{}}:undefined}>
             <span className="nav-icon">{n.icon}</span><span className="nav-label">{n.label}</span>
-            {n.badge&&<span className="nav-badge-count">{n.badge}</span>}
+            {n.id==="add"&&dragOverNav
+              ?<span style={{marginLeft:"auto",fontSize:10,color:"var(--accent-cyan)",fontFamily:"'JetBrains Mono',monospace"}}>drop →</span>
+              :(n.badge&&<span className="nav-badge-count">{n.badge}</span>)}
           </div>
         ))}</div>
         <div className="sidebar-footer">
@@ -2193,7 +2241,11 @@ export default function App() {
           </div>
         </div>
         <div className="page-content">
-          {page==="dashboard"&&<div className="terminal-layout">
+          {page==="dashboard"&&<div className="terminal-layout"
+            onDragOver={e=>{if(e.dataTransfer.types.includes('application/json')){e.preventDefault();setDragOverDashboard(true);}}}
+            onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOverDashboard(false);}}
+            onDrop={e=>{e.preventDefault();setDragOverDashboard(false);try{handleDragSubmit(JSON.parse(e.dataTransfer.getData('application/json')));}catch{}}}>
+            {dragOverDashboard&&<div className="dashboard-drop-overlay"><div className="dashboard-drop-overlay-inner"><div className="dashboard-drop-overlay-icon">⬇</div><div className="dashboard-drop-overlay-text">Drop to auto-review</div><div className="dashboard-drop-overlay-sub">AI will extract &amp; summarize</div></div></div>}
             <SignalStreamPanel title="Core AI" signals={AI_SIGNALS} dbSignals={aiDbSignals} panelId="ai_signal" accentColor="#06d6e0" side="left" isAdmin={user.role==="admin"} onAddSignal={handleAddSignal} onDeleteSignal={id=>handleDeleteSignal(id,'ai_signal')} onBulkAddSignals={handleBulkAddSignals} onBulkDeleteSignals={handleBulkDeleteSignals} />
             <div><Dashboard insights={data} onSelect={i=>{setSel(i);setPage("detail")}} onNavigateFiltered={navigateFiltered}/></div>
             <SignalStreamPanel title="Fin AI" signals={FIN_AI_SIGNALS} dbSignals={finDbSignals} panelId="financial_ai" accentColor="#10b981" side="right" isAdmin={user.role==="admin"} onAddSignal={handleAddSignal} onDeleteSignal={id=>handleDeleteSignal(id,'financial_ai')} onBulkAddSignals={handleBulkAddSignals} onBulkDeleteSignals={handleBulkDeleteSignals} />
@@ -2231,6 +2283,7 @@ export default function App() {
           </>}
         </div>
       </div>
+      {dragToast&&<div className="drag-toast">{dragSubmitting&&<span className="spinner" style={{width:14,height:14,borderWidth:2}}/>}{dragToast.msg}</div>}
     </div></>
   );
 }

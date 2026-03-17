@@ -112,7 +112,7 @@ Return JSON:
             parsed = null;
           }
 
-          if (parsed && typeof parsed.confidence === 'number' && parsed.confidence >= 0.7) {
+          if (parsed && typeof parsed.confidence === 'number' && parsed.confidence >= 0.5) {
             // High-confidence auto-publish
             const useTitle = (!title || title === urls[0]) ? (parsed.suggested_title || title || urls[0]) : title;
             const useCategory = (category === 'Other' || !category) ? (parsed.suggested_category?.split('|')[0].trim() || 'Other') : category;
@@ -282,7 +282,7 @@ Return JSON:
       return res.status(500).json({ error: 'Failed to parse AI response' });
     }
 
-    if (typeof parsed.confidence !== 'number' || parsed.confidence < 0.7) {
+    if (typeof parsed.confidence !== 'number' || parsed.confidence < 0.5) {
       return res.status(422).json({ error: `AI confidence too low (${parsed.confidence ?? 'unknown'}) — use manual review instead` });
     }
 

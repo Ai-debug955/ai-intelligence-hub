@@ -151,7 +151,34 @@ export function extractContent(rawJinaText, sourceUrl) {
   // Final clean-up: collapse multiple blank lines
   content = content.replace(/\n{3,}/g, '\n\n').trim();
 
-  return { platform, author, title, content, linkedUrls, publishedDate };
+  // ─── Index page detection ──────────────────────────────────────────
+  // Platforms with known short-path structures that are NOT index pages
+  const EXEMPT_PLATFORMS = ['GitHub', 'arXiv', 'YouTube', 'Twitter', 'LinkedIn'];
+  let isIndexPage = false;
+  try {
+    const parsedUrl = new URL(sourceUrl);
+    const path = parsedUrl.pathname.replace(/\/$/, '') || '/';
+    const segments = path.split('/').filter(Boolean);
+
+    // Explicit listing/feed/category URL patterns
+    if (/\/(category|categories|tag|tags|topics?)(\/|$)/i.test(path)) isIndexPage = true;
+    if (/\/(latest|feed)(\/|$)/i.test(path)) isIndexPage = true;
+    if (/\/legal\/circulars/i.test(path)) isIndexPage = true;
+
+    // Single-segment paths on generic web pages are usually section listings
+    // (e.g. /ai, /blog, /news) — exempt platforms with meaningful short paths
+    if (!isIndexPage && !EXEMPT_PLATFORMS.includes(platform) && segments.length < 2) {
+      isIndexPage = true;
+    }
+  } catch { /* ignore */ }
+
+  // Content-based: more than 8 subheadings strongly suggests a feed/listing
+  if (!isIndexPage) {
+    const subheadings = content.match(/^#{2,3}\s+/gm) || [];
+    if (subheadings.length > 8) isIndexPage = true;
+  }
+
+  return { platform, author, title, content, linkedUrls, publishedDate, isIndexPage };
 }
 
 // ─── fetchYouTubeTranscript ─────────────────────────────────────────
@@ -238,6 +265,10 @@ export async function getFullContent(url) {
 
     const extracted = extractContent(raw, url);
     if (!extracted) {
+      return { platform, author: null, title: null, mainContent: '', linkedContent: '', fullText: '', extractionSuccess: false };
+    }
+
+    if (extracted.isIndexPage) {
       return { platform, author: null, title: null, mainContent: '', linkedContent: '', fullText: '', extractionSuccess: false };
     }
 
