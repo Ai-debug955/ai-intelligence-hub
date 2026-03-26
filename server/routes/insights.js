@@ -8,6 +8,18 @@ const router = Router();
 
 const truncateText = (text, maxLen) => text && text.length > maxLen ? text.slice(0, maxLen) + '... [truncated]' : text;
 
+const VALID_CATEGORIES = ['Model', 'Tool', 'Paper', 'Use Case', 'News', 'Other'];
+const normalizeCategory = (raw) => {
+  if (!raw) return 'Other';
+  const s = raw.trim();
+  // Exact match first
+  const exact = VALID_CATEGORIES.find(c => c.toLowerCase() === s.toLowerCase());
+  if (exact) return exact;
+  // Starts-with match (handles "Model(new AI model...)" → "Model")
+  const prefix = VALID_CATEGORIES.find(c => s.toLowerCase().startsWith(c.toLowerCase()));
+  return prefix || 'Other';
+};
+
 // GET /api/insights — list all insights (with optional filters)
 router.get('/', requireAuth, (req, res) => {
   const { category, impact, status, entry_type, search } = req.query;
@@ -83,81 +95,83 @@ router.post('/', requireAuth, async (req, res) => {
   if (autoReview && urls && urls.length > 0) {
     try {
       const extracted = await getFullContent(urls[0]);
+      const hasContent = extracted.extractionSuccess && extracted.mainContent?.length > 50;
 
-      if (extracted.extractionSuccess) {
-        const systemMsg = 'You are an AI analyst. Return only valid JSON, no markdown.';
-        const userMsg = `Platform: ${extracted.platform}. Author: ${extracted.author || 'Unknown'}.
+      const articleTitle = title || urls[0];
+      const contentBlock = hasContent
+        ? `Content:\n${truncateText(extracted.mainContent, 4000)}\n\nLinked content:\n${truncateText(extracted.linkedContent, 500) || 'none'}`
+        : `Headline: ${articleTitle}\n\nNote: Full article text is unavailable. Infer category and write a brief summary based on the headline and URL domain.`;
+
+      const systemMsg = 'You are an AI analyst that categorizes and summarizes AI news. Always return valid JSON with no markdown fences.';
+      const userMsg = `Analyze this AI/tech news item and return JSON.
+
 URL: ${urls[0]}
+Platform: ${extracted.platform}
+${contentBlock}
 
-Content: ${truncateText(extracted.mainContent, 400)}
+Return this exact JSON structure (fill every field, do not skip):
+{"summary":"3-5 sentence summary of what this is about","key_points":["point 1","point 2","point 3"],"suggested_title":"concise title","suggested_category":"Model|Tool|Paper|Use Case|News|Other","suggested_impact":"High or Other","confidence":0.9}
 
-Linked: ${truncateText(extracted.linkedContent, 150) || 'none'}
+For headline-only items set confidence to 0.6. Only return the JSON object.`;
 
-Notes: ${description || 'none'}
+      const { content: aiText, tokens } = await groqChat(
+        [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+        0.3
+      );
 
-Return JSON:
-{"summary":"5-6 sentence summary","key_points":["pt1","pt2","pt3"],"suggested_title":"title","suggested_category":"Model(new AI model/weights/architecture/benchmark result)|Tool(library/API/product/app/framework)|Paper(research paper/preprint/study/dataset)|Use Case(real-world deployment/integration/application of AI)|News(company news/funding/acquisition/policy/regulation)|Other","suggested_impact":"High(only if major breakthrough, paradigm shift, or critical industry event — otherwise leave blank)","confidence":0.0}`;
+      console.log('[auto-review] hasContent:', hasContent, '| aiText:', aiText?.slice(0, 150));
 
-        const { content: aiText, tokens } = await groqChat(
-          [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-          0.3
-        );
+      if (aiText) {
+        let parsed;
+        try {
+          const match = aiText.match(/\{[\s\S]*\}/);
+          parsed = match ? JSON.parse(match[0]) : null;
+        } catch (e) {
+          console.error('[auto-review] JSON parse error:', e.message, '| raw:', aiText?.slice(0, 200));
+          parsed = null;
+        }
 
-        if (aiText) {
-          let parsed;
-          try {
-            const match = aiText.match(/\{[\s\S]*\}/);
-            parsed = JSON.parse(match[0]);
-          } catch {
-            parsed = null;
-          }
+        console.log('[auto-review] parsed.summary:', parsed?.summary?.slice(0, 80));
 
-          if (parsed && typeof parsed.confidence === 'number' && parsed.confidence >= 0.5) {
-            // High-confidence auto-publish
-            const useTitle = (!title || title === urls[0]) ? (parsed.suggested_title || title || urls[0]) : title;
-            const useCategory = (category === 'Other' || !category) ? (parsed.suggested_category?.split('|')[0].trim() || 'Other') : category;
-            const useImpact = (impact === 'Other' || !impact) ? (parsed.suggested_impact?.trim().startsWith('High') ? 'High' : 'Other') : impact;
+        // Accept any valid parsed response — user explicitly requested auto-review
+        if (parsed && parsed.summary) {
+          const useTitle = (!title || title === urls[0]) ? (parsed.suggested_title || title || urls[0]) : title;
+          const useCategory = (category === 'Other' || !category) ? (normalizeCategory(parsed.suggested_category?.split('|')[0])) : category;
+          const useImpact = (impact === 'Other' || !impact) ? (parsed.suggested_impact?.trim().startsWith('High') ? 'High' : 'Other') : impact;
 
-            const kpString = Array.isArray(parsed.key_points) ? parsed.key_points.join(';') : (parsed.key_points || '');
+          const kpString = Array.isArray(parsed.key_points) ? parsed.key_points.join(';') : (parsed.key_points || '');
 
-            db.prepare(`
-              UPDATE insights SET
-                title = ?,
-                summary = ?,
-                key_points = ?,
-                category = ?,
-                impact = ?,
-                needs_review = 0,
-                reviewed_by = 'AI Auto-Review',
-                reviewer_notes = 'Auto-reviewed from extracted content'
-              WHERE id = ?
-            `).run(
-              useTitle,
-              parsed.summary || '',
-              kpString,
-              useCategory,
-              useImpact,
-              insightId
-            );
+          db.prepare(`
+            UPDATE insights SET
+              title = ?,
+              summary = ?,
+              key_points = ?,
+              category = ?,
+              impact = ?,
+              needs_review = 0,
+              reviewed_by = 'AI Auto-Review',
+              reviewer_notes = ?
+            WHERE id = ?
+          `).run(
+            useTitle,
+            parsed.summary || '',
+            kpString,
+            useCategory,
+            useImpact,
+            hasContent ? 'Auto-reviewed from extracted content' : 'Auto-reviewed from title only (page not accessible)',
+            insightId
+          );
 
-            autoReviewed = true;
+          autoReviewed = true;
 
-            // Insert review record to match manual review workflow
-            db.prepare(`
-              INSERT INTO reviews (insight_id, reviewer, summary, key_points)
-              VALUES (?, ?, ?, ?)
-            `).run(insightId, 'AI Auto-Review', parsed.summary || '', kpString);
-          } else {
-            // Low confidence — store extracted content in description for the manual reviewer
-            db.prepare('UPDATE insights SET description = ? WHERE id = ?').run(
-              `[Auto-extraction attempted — low confidence]\n\n${extracted.mainContent.substring(0, 1000)}\n\n---\nOriginal notes: ${description || ''}`,
-              insightId
-            );
-          }
+          db.prepare(`
+            INSERT INTO reviews (insight_id, reviewer, summary, key_points)
+            VALUES (?, ?, ?, ?)
+          `).run(insightId, 'AI Auto-Review', parsed.summary || '', kpString);
+        }
 
-          if (tokens > 0) {
-            db.prepare('INSERT INTO ai_logs (type, tokens, actor) VALUES (?, ?, ?)').run('summary', tokens, req.user.name);
-          }
+        if (tokens > 0) {
+          db.prepare('INSERT INTO ai_logs (type, tokens, actor) VALUES (?, ?, ?)').run('summary', tokens, req.user.name);
         }
       }
     } catch (err) {
@@ -258,9 +272,9 @@ router.post('/:id/auto-review', requireAuth, async (req, res) => {
     const userMsg = `Platform: ${extracted.platform}. Author: ${extracted.author || 'Unknown'}.
 URL: ${urls[0]}
 
-Content: ${truncateText(extracted.mainContent, 400)}
+Content: ${truncateText(extracted.mainContent, 4000)}
 
-Linked: ${truncateText(extracted.linkedContent, 150) || 'none'}
+Linked: ${truncateText(extracted.linkedContent, 500) || 'none'}
 
 Notes: ${existing.description || 'none'}
 
@@ -291,7 +305,7 @@ Return JSON:
     const currentImpact = existing.impact;
 
     const useTitle = (!currentTitle || currentTitle === urls[0]) ? (parsed.suggested_title || currentTitle) : currentTitle;
-    const useCategory = (currentCategory === 'Other' || !currentCategory) ? (parsed.suggested_category?.split('|')[0].trim() || 'Other') : currentCategory;
+    const useCategory = (currentCategory === 'Other' || !currentCategory) ? (normalizeCategory(parsed.suggested_category?.split('|')[0])) : currentCategory;
     const useImpact = (currentImpact === 'Other' || !currentImpact) ? (parsed.suggested_impact?.trim().startsWith('High') ? 'High' : 'Other') : currentImpact;
     const kpString = Array.isArray(parsed.key_points) ? parsed.key_points.join(';') : (parsed.key_points || '');
 

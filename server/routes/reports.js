@@ -1,24 +1,42 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth } from '../auth.js';
+import { requireAuth, checkAiLimit } from '../auth.js';
 import { groqChat } from '../groq.js';
 
 const router = Router();
 
 // POST /api/reports/generate — generate AI report
-router.post('/generate', requireAuth, async (req, res) => {
+router.post('/generate', requireAuth, checkAiLimit, async (req, res) => {
   try {
-    const insights = db.prepare('SELECT * FROM insights WHERE needs_review = 0 ORDER BY created_at DESC LIMIT 50').all();
+    const days = parseInt(req.body.days) || 30;
+    const categories = Array.isArray(req.body.categories) && req.body.categories.length > 0
+      ? req.body.categories
+      : null; // null = all categories
+
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    let query = 'SELECT * FROM insights WHERE needs_review = 0 AND created_at >= ?';
+    const params = [since];
+    if (categories) {
+      query += ` AND category IN (${categories.map(() => '?').join(',')})`;
+      params.push(...categories);
+    }
+    query += ' ORDER BY created_at DESC LIMIT 60';
+
+    const insights = db.prepare(query).all(...params);
 
     if (insights.length === 0) {
-      return res.status(400).json({ error: 'No reviewed insights available for report generation' });
+      return res.status(400).json({ error: `No reviewed insights found for the selected period${categories ? ' and categories' : ''}.` });
     }
+
+    const periodLabel = days === 1 ? 'last 24 hours' : `last ${days} days`;
+    const categoryLabel = categories ? categories.join(', ') : 'all categories';
 
     const insightSummaries = insights.map(i =>
       `- [${i.category}] ${i.title}: ${i.summary || 'No summary'} (Impact: ${i.impact})`
     ).join('\n');
 
-    const prompt = `You are an AI research intelligence analyst. Generate a concise monthly intelligence brief based on these AI developments:\n\n${insightSummaries}\n\nFormat the report with:\n1. Executive Summary (2-3 sentences)\n2. Key Themes (3-5 bullet points)\n3. Notable Developments (top 5, with brief analysis)\n4. Impact Assessment\n5. Recommendations\n\nUse markdown formatting.`;
+    const prompt = `You are an AI research intelligence analyst. Generate a concise intelligence brief for the ${periodLabel}, covering ${categoryLabel}, based on these AI developments:\n\n${insightSummaries}\n\nFormat the report with:\n1. Executive Summary (2-3 sentences)\n2. Key Themes (3-5 bullet points)\n3. Notable Developments (top 5, with brief analysis)\n4. Impact Assessment\n5. Recommendations\n\nUse markdown formatting.`;
 
     const { content: report, tokens } = await groqChat([
       { role: 'system', content: 'You are an expert AI research analyst.' },

@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { requireAuth } from '../auth.js';
+import { requireAuth, checkAiLimit } from '../auth.js';
 import { groqChat } from '../groq.js';
 
 const router = Router();
 
 // POST /api/ai/summarize — generate insight summary for admin review
-router.post('/summarize', requireAuth, async (req, res) => {
+router.post('/summarize', requireAuth, checkAiLimit, async (req, res) => {
   const { title, reviewerNotes, category, urls, submitterNotes } = req.body;
   if (!title || !reviewerNotes) return res.status(400).json({ error: 'title and reviewerNotes required' });
 
@@ -34,6 +34,32 @@ router.post('/summarize', requireAuth, async (req, res) => {
   }
 
   res.json({ result: parsed });
+});
+
+// POST /api/ai/agent — answer a natural language query using Groq
+router.post('/agent', requireAuth, checkAiLimit, async (req, res) => {
+  const { query } = req.body;
+  if (!query || !query.trim()) return res.status(400).json({ error: 'query required' });
+
+  const systemMsg = `You are a knowledgeable AI research assistant embedded in an AI Intelligence Hub used by research and data teams. Answer the user's query accurately and clearly. For AI/tech topics, be technically precise and mention relevant recent developments. For general topics or news, give a balanced and informative overview. Format your response with clear paragraphs — avoid walls of text. Be thorough but concise. Do not start responses with "Certainly!" or similar filler phrases. Do not add disclaimers about knowledge cutoffs unless directly relevant.`;
+
+  try {
+    const { content, tokens } = await groqChat([
+      { role: 'system', content: systemMsg },
+      { role: 'user', content: query.trim() },
+    ], 0.6);
+
+    if (!content) return res.status(500).json({ error: 'AI response unavailable. Check GROQ_API_KEY.' });
+
+    if (tokens > 0) {
+      db.prepare('INSERT INTO ai_logs (type, tokens, actor) VALUES (?, ?, ?)').run('agent', tokens, req.user.name);
+    }
+
+    res.json({ answer: content });
+  } catch (err) {
+    console.error('Agent error:', err);
+    res.status(500).json({ error: 'AI agent error: ' + (err.message || 'unknown') });
+  }
 });
 
 export default router;

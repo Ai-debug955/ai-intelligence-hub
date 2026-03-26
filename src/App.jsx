@@ -9,6 +9,60 @@ const ENTRY_TYPES = [
   { id: "financial_ai", label: "Fin AI", icon: "$", desc: "Fin AI panel signals", color: "var(--accent-green)" }
 ];
 const CATEGORY_ICONS = { Model: "◆", Tool: "⚙", Paper: "◎", "Use Case": "△", News: "▣", Other: "◇" };
+const LEARN_CATEGORIES = ["AI Basics", "Machine Learning", "Deep Learning", "NLP", "Computer Vision", "GenAI", "RL", "MLOps", "Mathematics", "Ethics & Safety", "Other"];
+const LEARN_TYPES = ["website", "video", "playlist", "course", "paper", "other"];
+const LEARN_DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
+const LEARN_TYPE_ICONS = { website: "◇", video: "▶", playlist: "▤", course: "◈", paper: "◎", other: "◆" };
+const LEARN_DIFF_COLORS = { Beginner: "var(--accent-green)", Intermediate: "var(--accent-orange)", Advanced: "var(--accent-red)" };
+const ROADMAP_LEVELS = [
+  { id: 'Beginner',     num: '01', color: 'var(--accent-green)',  glow: 'rgba(16,185,129,0.45)' },
+  { id: 'Intermediate', num: '02', color: 'var(--accent-orange)', glow: 'rgba(251,146,60,0.45)' },
+  { id: 'Advanced',     num: '03', color: 'var(--accent-red)',    glow: 'rgba(239,68,68,0.45)'  },
+];
+const STAGE_PALETTE = [
+  { color:'#10b981', glow:'rgba(16,185,129,0.3)' },
+  { color:'#06b6d4', glow:'rgba(6,182,212,0.3)' },
+  { color:'#3b82f6', glow:'rgba(59,130,246,0.3)' },
+  { color:'#6366f1', glow:'rgba(99,102,241,0.3)' },
+  { color:'#8b5cf6', glow:'rgba(139,92,246,0.3)' },
+  { color:'#a855f7', glow:'rgba(168,85,247,0.3)' },
+  { color:'#d946ef', glow:'rgba(217,70,239,0.3)' },
+  { color:'#ec4899', glow:'rgba(236,72,153,0.3)' },
+];
+const LEARN_CHAT_SUGGESTIONS = {
+  'Kid-friendly': [
+    {q:'What is a robot brain?', icon:'◆'},
+    {q:'How does a computer learn stuff?', icon:'◎'},
+    {q:'Why does YouTube know what I like?', icon:'△'},
+    {q:'Can computers dream?', icon:'⚙'},
+    {q:'How does your phone know your face?', icon:'▣'},
+    {q:'What makes Siri or Alexa smart?', icon:'◈'},
+  ],
+  Beginner: [
+    {q:'What is a neural network?', icon:'◆'},
+    {q:'How does ChatGPT actually work?', icon:'◎'},
+    {q:"What's the difference between ML and AI?", icon:'△'},
+    {q:'What is fine-tuning a model?', icon:'⚙'},
+    {q:'Explain backpropagation simply', icon:'▣'},
+    {q:'What is a large language model?', icon:'◈'},
+  ],
+  Intermediate: [
+    {q:'How does the transformer architecture work?', icon:'◆'},
+    {q:'Explain RLHF in LLMs', icon:'◎'},
+    {q:'What is the vanishing gradient problem?', icon:'△'},
+    {q:'How does RAG (retrieval-augmented generation) work?', icon:'⚙'},
+    {q:'Difference between BERT and GPT?', icon:'▣'},
+    {q:'How does LoRA fine-tuning work?', icon:'◈'},
+  ],
+  Advanced: [
+    {q:'Derive the self-attention mechanism mathematically', icon:'◆'},
+    {q:'Explain KV cache optimization in LLMs', icon:'◎'},
+    {q:'How does Flash Attention reduce memory?', icon:'△'},
+    {q:'What is speculative decoding?', icon:'⚙'},
+    {q:'Explain mixture of experts (MoE) architecture', icon:'▣'},
+    {q:'How does GRPO differ from PPO in RLHF?', icon:'◈'},
+  ],
+};
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -136,6 +190,9 @@ const CSS = `
 .sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)}
 .main{margin-left:260px;flex:1;min-height:100vh;width:calc(100vw - 260px);overflow-x:hidden}
 .page-header{padding:16px 24px 12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--bg-secondary) 0%,var(--bg-primary) 100%);text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header-back-btn{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-secondary);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0}
+.header-back-btn:hover{border-color:var(--accent-cyan);color:var(--accent-cyan);background:rgba(6,214,224,0.06)}
+.header-back-label{font-size:11px}
 .profile-icon-btn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;border:2px solid transparent;transition:all 0.2s;box-shadow:0 0 12px var(--glow-blue)}
 .profile-icon-btn:hover{transform:scale(1.08);box-shadow:0 0 20px var(--glow-cyan);border-color:var(--accent-cyan)}
 .profile-icon-initials{font-size:13px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;line-height:1;letter-spacing:-0.5px}
@@ -446,6 +503,8 @@ tbody tr{cursor:pointer;transition:background 0.15s}tbody tr:hover{background:va
 .activity-badge-reviewed{background:rgba(16,185,129,0.12);color:var(--accent-green)}
 .activity-badge-report{background:rgba(139,92,246,0.12);color:var(--accent-purple)}
 .activity-badge-sample{background:rgba(245,158,11,0.12);color:var(--accent-orange)}
+.activity-badge-agent{background:rgba(59,130,246,0.12);color:var(--accent-blue)}
+.activity-badge-learn{background:rgba(16,185,129,0.12);color:var(--accent-green)}
 .activity-title{font-size:12px;font-weight:500;color:var(--text-primary);line-height:1.4;margin-bottom:2px}
 .activity-meta{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
 .pending-table-wrap{max-height:340px;overflow-y:auto}
@@ -465,6 +524,176 @@ tbody tr{cursor:pointer;transition:background 0.15s}tbody tr:hover{background:va
 .dashboard-drop-overlay-icon{font-size:32px;margin-bottom:8px}
 .dashboard-drop-overlay-text{font-size:16px;font-weight:600;color:var(--accent-cyan);letter-spacing:-0.3px}
 .dashboard-drop-overlay-sub{font-size:12px;color:var(--text-muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.learn-mode-toggle{display:flex;gap:4px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:20px}
+.learn-mode-btn{padding:8px 22px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text-secondary);transition:all 0.2s;font-family:'Outfit',sans-serif}
+.learn-mode-btn.active{background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));color:#fff;box-shadow:0 0 16px var(--glow-blue)}
+.learn-resources-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.learn-resource-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;transition:all 0.2s;display:flex;flex-direction:column;gap:10px}
+.learn-resource-card:hover{border-color:var(--border-glow);background:var(--bg-card-hover);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.learn-resource-title{font-size:14px;font-weight:600;color:var(--text-primary);line-height:1.4}
+.learn-resource-desc{font-size:12px;color:var(--text-secondary);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.learn-resource-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto}
+.learn-diff-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.5px}
+.learn-type-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.12);color:var(--accent-purple);font-family:'JetBrains Mono',monospace}
+.learn-cat-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(59,130,246,0.12);color:var(--accent-blue);font-family:'JetBrains Mono',monospace}
+.learn-free-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+.learn-resource-open-btn{margin-left:auto;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--accent-blue);cursor:pointer;transition:all 0.15s;font-family:'JetBrains Mono',monospace;text-decoration:none;flex-shrink:0}
+.learn-resource-open-btn:hover{background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.4)}
+.learn-admin-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 18px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.15);border-radius:10px}
+.learn-empty{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px}
+.learn-form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.learn-form-card{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:14px;padding:28px 32px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.learn-diff-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.learn-diff-btn{padding:6px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-secondary);transition:all 0.2s;font-family:'JetBrains Mono',monospace}
+.learn-diff-btn.active{border-color:var(--border-glow);color:var(--text-primary);background:var(--bg-card-hover)}
+.learn-chat-container{display:flex;flex-direction:column;height:calc(100vh - 240px);min-height:400px;max-height:680px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.learn-chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.learn-chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.learn-chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);gap:8px}
+.learn-chat-messages::-webkit-scrollbar{width:4px}.learn-chat-messages::-webkit-scrollbar-track{background:transparent}.learn-chat-messages::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:4px}
+.learn-chat-bubble{max-width:75%;padding:12px 16px;border-radius:12px;font-size:13px;word-break:break-word}
+.learn-chat-bubble.user{background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));color:#fff;align-self:flex-end;border-bottom-right-radius:4px;line-height:1.65;white-space:pre-wrap}
+.learn-chat-bubble.assistant{background:var(--bg-secondary);border:1px solid var(--border);color:var(--text-primary);align-self:flex-start;border-bottom-left-radius:4px;line-height:1.5}
+.learn-chat-input-row{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;background:var(--bg-secondary)}
+.learn-chat-input{flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-primary);outline:none;font-family:'Outfit',sans-serif;transition:border-color 0.2s;resize:none}
+.learn-chat-input:focus{border-color:var(--border-glow)}
+.learn-chat-send{background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));border:none;border-radius:8px;padding:10px 22px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.2s;font-family:'Outfit',sans-serif;flex-shrink:0}
+.learn-chat-send:hover{opacity:0.88}.learn-chat-send:disabled{opacity:0.45;cursor:not-allowed}
+.learn-chat-resize-handle{height:8px;background:var(--border);cursor:ns-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background 0.15s;user-select:none}
+.learn-chat-resize-handle:hover{background:var(--border-glow)}
+@keyframes roadmapIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes spinePulse{0%{top:0%;opacity:0.9}100%{top:110%;opacity:0}}
+.roadmap-track{position:relative;padding-left:56px;padding-top:4px;padding-bottom:48px}
+.roadmap-spine{position:absolute;left:20px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--accent-green) 0%,var(--accent-orange) 52%,var(--accent-red) 100%);border-radius:2px}
+.roadmap-spine-pulse{position:absolute;left:20px;top:0;width:2px;height:60px;background:linear-gradient(to bottom,rgba(255,255,255,0.5),transparent);animation:spinePulse 2.8s ease-in-out infinite;pointer-events:none}
+.roadmap-level-section{margin-bottom:4px}
+.roadmap-level-header-row{display:flex;align-items:center;gap:14px;margin-bottom:14px;margin-top:28px;position:relative}
+.roadmap-level-header-row:first-child{margin-top:0}
+.roadmap-level-badge{position:absolute;left:-56px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;font-family:'JetBrains Mono',monospace;z-index:2;box-shadow:0 0 0 4px var(--bg-secondary)}
+.roadmap-level-title-text{font-size:13px;font-weight:800;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+.roadmap-level-line{flex:1;height:1px;background:var(--border)}
+.roadmap-resource-row{position:relative;margin-bottom:10px;animation:roadmapIn 0.38s ease both}
+.roadmap-connector{position:absolute;left:-36px;top:50%;transform:translateY(-50%);display:flex;align-items:center}
+.roadmap-connector-line{width:24px;height:1px;background:var(--border)}
+.roadmap-connector-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:all 0.2s}
+.roadmap-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;transition:all 0.22s;display:flex;flex-direction:column;gap:8px;cursor:default}
+.roadmap-card:hover{border-color:var(--border-glow);background:var(--bg-card-hover);transform:translateX(4px);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+.roadmap-card:hover .roadmap-connector-dot{transform:scale(1.3)}
+.roadmap-level-pill{padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-secondary);transition:all 0.2s;font-family:'Outfit',sans-serif}
+.roadmap-level-pill:hover{border-color:var(--border-glow);color:var(--text-primary)}
+.roadmap-cat-pill{padding:4px 11px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all 0.15s;font-family:'JetBrains Mono',monospace}
+.roadmap-cat-pill:hover{background:var(--bg-card);color:var(--text-secondary);border-color:var(--border-glow)}
+.roadmap-cat-pill.active{background:var(--bg-card);color:var(--text-primary);border-color:var(--border-glow)}
+/* Stage Accordion (kept for admin forms) */
+.stages-admin-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.15);border-radius:10px}
+.stage-add-res-btn{margin-top:12px;padding:7px 20px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.stage-add-res-btn:hover{border-color:var(--border-glow);color:var(--text-primary);background:var(--bg-card)}
+.stage-form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.stage-form-card{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:14px;padding:28px 32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+/* ─── AI ENGINEER ROADMAP ────────────────────────────────────────── */
+@keyframes rmWeekOpen{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes rmCardIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.rm-outer{position:relative;max-width:900px;margin:0 auto;padding:24px 8px 56px}
+.rm-spine{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);z-index:0;background:linear-gradient(180deg,transparent 0,var(--border) 80px,var(--border) calc(100% - 80px),transparent 100%)}
+.rm-center{display:flex;justify-content:center;position:relative;z-index:2}
+.rm-badge-start{display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;font-weight:800;font-size:10px;font-family:'JetBrains Mono',monospace;padding:7px 22px;border-radius:20px;letter-spacing:2.5px;box-shadow:0 0 20px rgba(16,185,129,0.45);margin:16px 0}
+.rm-badge-finish{background:linear-gradient(135deg,#ec4899,#8b5cf6) !important;box-shadow:0 0 20px rgba(236,72,153,0.45) !important}
+.rm-month-section{margin-bottom:48px}
+.rm-weeks-row{display:flex;gap:14px;align-items:stretch}
+.rm-month-node{display:flex;justify-content:center;position:relative;z-index:2;margin:0}
+.rm-month-box{background:var(--bg-card);border:2px solid;border-radius:14px;padding:11px 28px;text-align:center;min-width:200px;max-width:280px;box-shadow:0 6px 28px rgba(0,0,0,0.4);z-index:2}
+.rm-month-tag{font-size:9px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.rm-month-name{font-size:14px;font-weight:700;color:var(--text-primary);line-height:1.3}
+.rm-month-admin{display:flex;gap:4px;justify-content:center;margin-top:7px}
+.rm-diam-row{display:flex;justify-content:center;position:relative;z-index:2;margin:3px 0}
+.rm-diam{width:13px;height:13px;transform:rotate(45deg);border-radius:2px}
+.rm-week-row{display:flex;align-items:flex-start;position:relative;z-index:1;margin:7px 0}
+.rm-week-side{width:44%;flex-shrink:0}
+.rm-week-side.rm-wl{padding-right:5px;animation:rmCardIn 0.3s ease both}
+.rm-week-side.rm-wr{padding-left:5px;animation:rmCardIn 0.3s ease both;transform-origin:right}
+.rm-week-spacer{width:50%;flex-shrink:0}
+.rm-week-conn{flex:1;height:2px;margin-top:28px;flex-shrink:0;opacity:0.55;border-radius:1px}
+.rm-week-diam{width:11px;height:11px;flex-shrink:0;margin-top:22px;transform:rotate(45deg);border-radius:2px}
+.rm-week-card{background:var(--bg-card);border:1px dashed var(--border);border-radius:11px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,box-shadow 0.18s,transform 0.18s;display:flex;flex-direction:column}
+.rm-week-card:hover{border-color:var(--border-glow);box-shadow:0 4px 20px rgba(0,0,0,0.3);transform:translateY(-1px)}
+.rm-week-card.wc-open{border-color:var(--border-glow)}
+.rm-week-top{display:flex;align-items:flex-start;gap:10px;padding:14px 14px 12px;flex:1}
+.rm-week-badge{font-size:8px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;color:#fff;padding:3px 8px;border-radius:4px;flex-shrink:0;margin-top:2px;white-space:nowrap}
+.rm-week-info{flex:1;min-width:0}
+.rm-week-title{font-size:13px;font-weight:700;color:var(--text-primary);line-height:1.35;margin-bottom:4px}
+.rm-week-desc{font-size:11px;color:var(--text-muted);line-height:1.5}
+.rm-week-chev{font-size:9px;color:var(--text-muted);flex-shrink:0;margin-top:2px;transition:transform 0.2s;display:inline-block}
+.rm-week-chev.open{transform:rotate(180deg)}
+.rm-week-body{border-top:1px solid var(--border);background:rgba(0,0,0,0.12);animation:rmWeekOpen 0.2s ease}
+.rm-res-item{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(30,34,53,0.7);transition:background 0.12s}
+.rm-res-item:last-of-type{border-bottom:none}
+.rm-res-item:hover{background:rgba(255,255,255,0.02)}
+.rm-res-icon{font-size:13px;flex-shrink:0;width:15px;text-align:center;margin-top:2px}
+.rm-res-body{flex:1;min-width:0}
+.rm-res-link{font-size:11px;font-weight:600;color:var(--accent-cyan);text-decoration:none;line-height:1.35;display:block}
+.rm-res-link:hover{text-decoration:underline;opacity:0.85}
+.rm-res-sdesc{font-size:10px;color:var(--text-muted);margin-top:2px;line-height:1.4}
+.rm-res-badges{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.rm-res-badge{font-size:8px;font-family:'JetBrains Mono',monospace;padding:1px 5px;border-radius:3px;background:var(--bg-secondary);border:1px solid var(--border);color:var(--text-muted)}
+.rm-res-badge-free{color:var(--accent-green);border-color:rgba(16,185,129,0.25)}
+.rm-res-adm{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.rm-week-empty{padding:12px 14px;text-align:center;font-size:11px;color:var(--text-muted);font-style:italic}
+.rm-week-add-res{width:100%;padding:7px;border:none;border-top:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:10px;cursor:pointer;transition:all 0.12s;font-family:'Outfit',sans-serif;text-align:center}
+.rm-week-add-res:hover{color:var(--text-primary);background:rgba(255,255,255,0.02)}
+.rm-month-add-week{display:flex;justify-content:center;margin:5px 0 10px}
+.rm-add-week-btn{background:transparent;border:1px dashed var(--border);border-radius:7px;padding:5px 18px;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'Outfit',sans-serif}
+.rm-add-week-btn:hover{border-color:var(--border-glow);color:var(--text-primary);background:var(--bg-card)}
+@media(max-width:640px){
+  .rm-spine{left:14px;transform:none}
+  .rm-center{justify-content:flex-start;padding-left:30px}
+  .rm-month-node{justify-content:flex-start;padding-left:30px}
+  .rm-month-box{min-width:0;text-align:left}
+  .rm-week-row{flex-direction:column;padding-left:30px}
+  .rm-week-side{width:100%;padding:0}
+  .rm-week-spacer,.rm-week-conn{display:none}
+  .rm-week-diam{display:none}
+  .rm-diam-row{justify-content:flex-start;padding-left:8px}
+}
+/* ─── AI AGENT ──────────────────────────────────────────── */
+.agent-page{display:flex;flex-direction:column;min-height:calc(100vh - 120px)}
+.agent-center-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 0 40px}
+.agent-center-zone.has-results{align-items:stretch;justify-content:flex-start;padding-bottom:0}
+.agent-search-wrap{width:100%;max-width:720px;margin:0 auto 28px}
+.agent-search-bar{display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border-glow);border-radius:14px;padding:12px 16px;transition:all 0.2s;box-shadow:0 4px 24px rgba(0,0,0,0.25)}
+.agent-search-bar:focus-within{border-color:var(--accent-cyan);box-shadow:0 0 0 3px var(--glow-cyan),0 4px 24px rgba(0,0,0,0.3)}
+.agent-search-icon{font-size:18px;color:var(--accent-cyan);flex-shrink:0}
+.agent-input{flex:1;background:transparent;border:none;color:var(--text-primary);font-size:15px;font-family:'Outfit',sans-serif;outline:none;min-width:0}
+.agent-input::placeholder{color:var(--text-muted)}
+.agent-welcome{text-align:center;width:100%;max-width:600px;margin:0 auto}
+.agent-welcome-icon{font-size:48px;color:var(--accent-cyan);margin-bottom:20px;opacity:0.8}
+.agent-welcome-title{font-size:24px;font-weight:700;color:var(--text-primary);margin-bottom:10px;letter-spacing:-0.5px}
+.agent-welcome-sub{font-size:14px;color:var(--text-muted);margin-bottom:32px;line-height:1.6}
+.agent-chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.agent-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.agent-chip:hover{border-color:var(--accent-cyan);color:var(--text-primary);background:var(--bg-card-hover);box-shadow:0 0 10px var(--glow-cyan)}
+.agent-loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px;color:var(--text-muted);font-size:13px;width:100%}
+.agent-results{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.agent-results{grid-template-columns:1fr}}
+.agent-section{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px}
+.agent-section-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.agent-section-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.agent-section-title{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px}
+.agent-section-count{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.agent-empty{font-size:13px;color:var(--text-muted);padding:12px 0;text-align:center}
+.agent-ai-body{font-size:13px;color:var(--text-secondary);line-height:1.75}
+.agent-ai-footer{margin-top:14px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)}
+.agent-hub-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.2s}
+.agent-hub-card:last-child{margin-bottom:0}
+.agent-hub-card:hover{border-color:var(--border-glow);background:var(--bg-card-hover)}
+.agent-hub-title{font-size:13px;font-weight:600;color:var(--text-primary);line-height:1.4;margin-bottom:4px}
+.agent-hub-desc{font-size:11px;color:var(--text-muted);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.agent-hub-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* Dashboard agent search bar */
+@keyframes dash-bar-glow{0%,100%{box-shadow:0 0 0 1px rgba(6,214,224,0.15),0 0 8px rgba(6,214,224,0.06)}50%{box-shadow:0 0 0 1px rgba(6,214,224,0.38),0 0 18px rgba(6,214,224,0.16)}}
+.dash-agent-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:9px 16px;margin-bottom:20px;transition:border-color 0.2s;cursor:text;animation:fadeIn 0.35s ease forwards,dash-bar-glow 3.5s ease-in-out 0.4s infinite}
+.dash-agent-bar:focus-within{border-color:var(--accent-cyan);box-shadow:0 0 0 3px var(--glow-cyan);animation:none;opacity:1}
+.dash-agent-input{flex:1;background:transparent;border:none;color:var(--text-primary);font-size:13px;font-family:'Outfit',sans-serif;outline:none;min-width:0}
+.dash-agent-input::placeholder{color:var(--text-muted)}
 `;
 
 function SourceBadge({ url, small }) {
@@ -819,7 +1048,8 @@ function SignalStreamPanel({ title, signals, dbSignals, panelId, accentColor, si
 }
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────
-function Dashboard({ insights, onSelect, onNavigateFiltered }) {
+function Dashboard({ insights, onSelect, onNavigateFiltered, onNavigateToAgent }) {
+  const [agentBarQuery, setAgentBarQuery] = useState('');
   const total = insights.length;
   const thisMonth = insights.filter(i => new Date(i.created_at) > new Date(Date.now() - 30*86400000)).length;
   const highImpact = insights.filter(i => i.impact === "High").length;
@@ -828,6 +1058,11 @@ function Dashboard({ insights, onSelect, onNavigateFiltered }) {
   const recentHigh = insights.filter(i => i.impact==="High"&&!i.needs_review).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,4);
   const recent = [...insights].filter(i=>!i.needs_review).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
 
+  const submitAgentBar = () => {
+    const q = agentBarQuery.trim();
+    if (q) { onNavigateToAgent(q); setAgentBarQuery(''); }
+  };
+
   return (
     <div>
       <div className="metrics-row fade-in">
@@ -835,6 +1070,11 @@ function Dashboard({ insights, onSelect, onNavigateFiltered }) {
         <div className="metric-card" onClick={()=>onNavigateFiltered({status:"Reviewed"})}><div className="metric-value">{thisMonth}</div><div className="metric-label">This Month</div><div className="metric-card-hint">Click to view reviewed →</div></div>
         <div className="metric-card" onClick={()=>onNavigateFiltered({impact:"High"})}><div className="metric-value">{highImpact}</div><div className="metric-label">High Impact</div><div className="metric-card-hint">Click to filter by High →</div></div>
         {needsReview>0&&<div className="metric-card alert-card" onClick={()=>onNavigateFiltered({status:"Needs Review"})}><div className="metric-value alert-value">{needsReview}</div><div className="metric-label">Needs Review</div><div className="metric-card-hint">Click to view pending →</div></div>}
+      </div>
+      <div className="dash-agent-bar">
+        <span style={{color:'var(--accent-cyan)',fontSize:14,flexShrink:0}}>◈</span>
+        <input className="dash-agent-input" placeholder="What's on your mind today?" value={agentBarQuery} onChange={e=>setAgentBarQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')submitAgentBar();}}/>
+        <button onClick={submitAgentBar} disabled={!agentBarQuery.trim()} style={{background:'transparent',border:'none',color:agentBarQuery.trim()?'var(--accent-cyan)':'var(--text-muted)',cursor:agentBarQuery.trim()?'pointer':'default',fontSize:16,padding:'0 2px',flexShrink:0,lineHeight:1,transition:'color 0.2s'}}>→</button>
       </div>
       <div className="two-col">
         <div className="fade-in fade-in-d1">
@@ -1342,20 +1582,35 @@ function InsightDetail({ insight, onBack, onUpdate, onDelete, isAdmin }) {
 }
 
 // ─── REPORT ─────────────────────────────────────────────────────────
+const REPORT_CATEGORIES = ['Model','Tool','Paper','Use Case','News','Other'];
+const REPORT_DAY_OPTIONS = [
+  {label:'Last 7 days', value:7},
+  {label:'Last 14 days', value:14},
+  {label:'Last 30 days', value:30},
+  {label:'Last 60 days', value:60},
+  {label:'Last 90 days', value:90},
+];
+
 function ReportGen({ insights }) {
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
-  const reviewed = insights.filter(i => !i.needs_review && i.summary);
-  const highRecent = reviewed.filter(i => i.impact === "High" && new Date(i.created_at) > new Date(Date.now() - 30*86400000));
+  const [days, setDays] = useState(30);
+  const [selectedCats, setSelectedCats] = useState([]);
   const pending = insights.filter(i => i.needs_review).length;
+
+  const toggleCat = (cat) => setSelectedCats(prev =>
+    prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+  );
+
   const go = async () => {
     setLoading(true);
     try {
-      const text = await api.generateReport();
+      const text = await api.generateReport(days, selectedCats);
       setReport(text);
     } catch (err) { setReport("❌ " + err.message); }
     setLoading(false);
   };
+
   const inlineFormat = (text, key) => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return <span key={key}>{parts.map((p, j) =>
@@ -1372,15 +1627,73 @@ function ReportGen({ insights }) {
     if (!l.trim()) return <br key={i} />;
     return <span key={i}>{inlineFormat(l, i)}<br /></span>;
   });
+
+  const periodLabel = REPORT_DAY_OPTIONS.find(o => o.value === days)?.label || `Last ${days} days`;
+  const catLabel = selectedCats.length === 0 ? 'All categories' : selectedCats.join(', ');
+
   return (
     <div className="fade-in">
       <div className="detail-section" style={{marginBottom:24}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-          <div><div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Monthly AI Intelligence Report</div><div style={{fontSize:13,color:"var(--text-muted)"}}>{highRecent.length} high-impact reviewed insight{highRecent.length!==1?"s":""}{pending>0&&<span style={{color:"var(--accent-orange)",marginLeft:8}}>⚠ {pending} pending</span>}</div></div>
-          <button className="btn btn-primary" onClick={go} disabled={loading}>{loading?<><span className="spinner"/> Generating...</>:"⚡ Generate Report"}</button>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
+          <div style={{flex:1,minWidth:260}}>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:12}}>AI Intelligence Brief</div>
+
+            {/* Period selector */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--text-muted)",letterSpacing:"0.5px",textTransform:"uppercase",marginBottom:6}}>Period</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {REPORT_DAY_OPTIONS.map(o => (
+                  <button key={o.value} onClick={() => setDays(o.value)}
+                    style={{padding:"4px 12px",borderRadius:6,fontSize:12,fontWeight:500,cursor:"pointer",border:"1px solid",
+                      borderColor: days===o.value ? "var(--accent-cyan)" : "var(--border)",
+                      background: days===o.value ? "rgba(6,214,224,0.1)" : "var(--bg-secondary)",
+                      color: days===o.value ? "var(--accent-cyan)" : "var(--text-secondary)",
+                      transition:"all 0.15s"}}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category selector */}
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--text-muted)",letterSpacing:"0.5px",textTransform:"uppercase",marginBottom:6}}>
+                Categories <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>— {selectedCats.length === 0 ? 'all' : selectedCats.length + ' selected'}</span>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {REPORT_CATEGORIES.map(cat => {
+                  const active = selectedCats.includes(cat);
+                  return (
+                    <button key={cat} onClick={() => toggleCat(cat)}
+                      style={{padding:"4px 12px",borderRadius:6,fontSize:12,fontWeight:500,cursor:"pointer",border:"1px solid",
+                        borderColor: active ? "var(--accent-blue)" : "var(--border)",
+                        background: active ? "rgba(59,130,246,0.1)" : "var(--bg-secondary)",
+                        color: active ? "var(--accent-blue)" : "var(--text-secondary)",
+                        transition:"all 0.15s"}}>
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {pending > 0 && <div style={{marginTop:10,fontSize:12,color:"var(--accent-orange)"}}>⚠ {pending} insight{pending!==1?"s":""} pending review — excluded from brief</div>}
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
+            <button className="btn btn-primary" onClick={go} disabled={loading}>
+              {loading ? <><span className="spinner"/> Generating…</> : "⚡ Generate Brief"}
+            </button>
+            <div style={{fontSize:11,color:"var(--text-muted)",textAlign:"right"}}>
+              {periodLabel} · {catLabel}
+            </div>
+          </div>
         </div>
       </div>
-      {report?<div className="report-box fade-in">{render(report)}</div>:!loading&&<div className="empty-state"><div className="empty-state-icon">📊</div><div className="empty-state-text">Generate an AI-powered monthly intelligence brief</div></div>}
+      {report
+        ? <div className="report-box fade-in">{render(report)}</div>
+        : !loading && <div className="empty-state"><div className="empty-state-icon">📊</div><div className="empty-state-text">Select a period and categories, then generate your brief</div></div>
+      }
     </div>
   );
 }
@@ -1436,6 +1749,993 @@ function LoginPage({ onLogin }) {
   );
 }
 
+// ─── AI AGENT ────────────────────────────────────────────────────────
+function AIAgent({ insights, learnResources = [], query, result, onQueryChange, onResultChange, onNavigateToInsight, onNavigateToLearn }) {
+  const [loading, setLoading] = useState(false);
+
+  const STOP_WORDS = new Set([
+    'a','an','the','is','are','was','were','be','been','being','have','has','had',
+    'do','does','did','will','would','could','should','may','might','shall','can',
+    'to','of','in','on','at','for','with','by','from','as','or','and','but','not',
+    'it','its','this','that','these','those','i','you','we','they','he','she',
+    'hi','hello','hey','how','what','who','why','when','where','which',
+    'tell','me','us','my','your','please','any','all','some','just','than','then',
+    'so','up','out','about','get','show','give','can','want','need','use',
+  ]);
+
+  const escRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const wbMatch = (text, t) => new RegExp(`\\b${escRe(t)}`, 'i').test(text);
+
+  const parseTerms = (q) => q.toLowerCase()
+    .split(/\s+/)
+    .map(t => t.replace(/[^a-z0-9]/g, ''))
+    .filter(t => t.length >= 2 && !STOP_WORDS.has(t));
+
+  const scoreItem = (fields, terms) => {
+    // fields: array of { text, weight }
+    let score = 0;
+    for (const t of terms)
+      for (const { text, weight } of fields)
+        if (text && wbMatch(text, t)) score += weight;
+    return score;
+  };
+
+  const searchHub = (q) => {
+    const terms = parseTerms(q);
+    if (terms.length === 0) return { insights: [], resources: [] };
+
+    // Score insights
+    const scoredInsights = insights
+      .map(ins => ({
+        item: ins,
+        _type: 'insight',
+        score: scoreItem([
+          { text: ins.title, weight: 5 },
+          { text: ins.tags, weight: 4 },
+          { text: ins.category, weight: 3 },
+          { text: ins.description, weight: 2 },
+          { text: [ins.summary, ins.key_points, ins.reviewer_notes].filter(Boolean).join(' '), weight: 1 },
+        ], terms),
+      }))
+      .filter(x => x.score >= 3)
+      .sort((a, b) => b.score - a.score || new Date(b.item.created_at) - new Date(a.item.created_at))
+      .slice(0, 6);
+
+    // Score learn resources
+    const scoredResources = learnResources
+      .map(r => ({
+        item: r,
+        _type: 'resource',
+        score: scoreItem([
+          { text: r.title, weight: 5 },
+          { text: r.category, weight: 4 },
+          { text: r.difficulty, weight: 3 },
+          { text: r.resource_type, weight: 3 },
+          { text: r.description, weight: 2 },
+        ], terms),
+      }))
+      .filter(x => x.score >= 3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
+
+    return { insights: scoredInsights.map(x => x.item), resources: scoredResources.map(x => x.item) };
+  };
+
+  const doSearch = async (q) => {
+    const trimmed = (q || '').trim();
+    if (!trimmed) return;
+    onQueryChange(trimmed);
+    setLoading(true);
+    onResultChange(null);
+    const [hubResults, aiResult] = await Promise.all([
+      Promise.resolve(searchHub(trimmed)),
+      api.agentQuery(trimmed).then(answer => ({ answer })).catch(e => ({ error: e.message })),
+    ]);
+    onResultChange({ hubResults, aiResponse: aiResult.answer || null, aiError: aiResult.error || null });
+    setLoading(false);
+  };
+
+  // Auto-search on mount only when a query is set but no result yet (e.g. navigated from dashboard search bar)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (query && !result) doSearch(query); }, []);
+
+  const CHIPS = [
+    { icon: '▣', label: 'Latest AI news' },
+    { icon: '◆', label: 'What is RAG?' },
+    { icon: '◎', label: 'Show me LLM resources' },
+    { icon: '⚙', label: 'Recent developments in GenAI' },
+  ];
+
+  const hasContent = loading || result;
+
+  return (
+    <div className="agent-page fade-in">
+      <div className={`agent-center-zone${hasContent ? ' has-results' : ''}`}>
+        {/* Search bar — always at top when results visible, else centered */}
+        <div className="agent-search-wrap">
+          {!hasContent && (
+            <div className="agent-welcome" style={{marginBottom:32}}>
+              <div className="agent-welcome-icon">◈</div>
+              <div className="agent-welcome-title">AI Intelligence Agent</div>
+              <div className="agent-welcome-sub">I search through the Hub and bring you knowledge from the AI world — simultaneously.</div>
+            </div>
+          )}
+          <div className="agent-search-bar">
+            <span className="agent-search-icon">◈</span>
+            <input
+              className="agent-input"
+              value={query}
+              onChange={e => onQueryChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') doSearch(query); }}
+              placeholder="What's on your mind? Ask me anything about AI..."
+              autoFocus
+            />
+            {result && !loading && (
+              <button
+                title="Clear and start over"
+                onClick={() => { onQueryChange(''); onResultChange(null); }}
+                style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:18,cursor:'pointer',padding:'0 4px',lineHeight:1,flexShrink:0}}
+              >×</button>
+            )}
+            <button className="btn btn-primary btn-sm" onClick={() => doSearch(query)} disabled={loading || !query.trim()} style={{flexShrink:0}}>
+              {loading ? <span className="spinner" style={{width:14,height:14,borderWidth:2}}/> : 'Search'}
+            </button>
+          </div>
+          {!hasContent && (
+            <div className="agent-chips" style={{marginTop:20}}>
+              {CHIPS.map(({icon, label}) => (
+                <button key={label} className="agent-chip" onClick={() => doSearch(label)}>
+                  <span style={{color:'var(--accent-cyan)'}}>{icon}</span> {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {loading && (
+          <div className="agent-loading fade-in">
+            <span className="spinner" style={{width:26,height:26,borderWidth:3}}/>
+            <div>Searching the Hub and thinking...</div>
+          </div>
+        )}
+
+        {result && !loading && (
+          <div className="agent-results fade-in">
+            {/* Left column: Hub results */}
+            <div className="agent-section">
+              <div className="agent-section-header">
+                <span className="agent-section-icon" style={{background:'rgba(59,130,246,0.15)',color:'var(--accent-blue)'}}>▤</span>
+                <div>
+                  <div className="agent-section-title">From the Hub</div>
+                  <div className="agent-section-count">
+                    {(() => {
+                      const total = result.hubResults.insights.length + result.hubResults.resources.length;
+                      return total > 0 ? `${total} result${total === 1 ? '' : 's'} found` : 'No matches found';
+                    })()}
+                  </div>
+                </div>
+              </div>
+              {result.hubResults.insights.length === 0 && result.hubResults.resources.length === 0
+                ? <div className="agent-empty">No matching entries in the Hub for this query.</div>
+                : <>
+                    {result.hubResults.insights.length > 0 && (
+                      <>
+                        <div style={{fontSize:10,fontWeight:600,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6,paddingLeft:2}}>Intelligence</div>
+                        {result.hubResults.insights.map(ins => (
+                          <div key={ins.id} className="agent-hub-card" onClick={() => onNavigateToInsight(ins)}>
+                            <div className="agent-hub-title">{ins.title}</div>
+                            {(ins.summary || ins.description) && (
+                              <div className="agent-hub-desc">{(ins.summary || ins.description).slice(0, 120)}…</div>
+                            )}
+                            <div className="agent-hub-meta">
+                              <span className="badge badge-category" style={{fontSize:10}}>{CATEGORY_ICONS[ins.category]} {ins.category}</span>
+                              {(ins.tags || '').split(',').slice(0, 2).map(t => t.trim()).filter(Boolean).map(t => (
+                                <span key={t} className="badge badge-tag" style={{fontSize:10}}>{t}</span>
+                              ))}
+                              {ins.impact === 'High' && <span className="badge badge-impact-High" style={{fontSize:10}}>High</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {result.hubResults.resources.length > 0 && (
+                      <>
+                        <div style={{fontSize:10,fontWeight:600,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.08em',margin:'10px 0 6px',paddingLeft:2}}>Learn Resources</div>
+                        {result.hubResults.resources.map(r => (
+                          <div key={r.id} className="agent-hub-card" onClick={() => onNavigateToLearn && onNavigateToLearn(r.week_id || null)}>
+                            <div className="agent-hub-title">{r.title}</div>
+                            {r.description && <div className="agent-hub-desc">{r.description.slice(0, 120)}…</div>}
+                            <div className="agent-hub-meta">
+                              <span className="badge badge-tag" style={{fontSize:10,background:'rgba(16,185,129,0.1)',color:'var(--accent-green)',border:'1px solid rgba(16,185,129,0.25)'}}>◎ Learn</span>
+                              {r.category && <span className="badge badge-category" style={{fontSize:10}}>{r.category}</span>}
+                              {r.difficulty && <span className="badge badge-tag" style={{fontSize:10}}>{r.difficulty}</span>}
+                              {r.resource_type && <span className="badge badge-tag" style={{fontSize:10,textTransform:'capitalize'}}>{r.resource_type}</span>}
+                              {r.is_free ? <span className="badge badge-tag" style={{fontSize:10,color:'var(--accent-green)'}}>Free</span> : null}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
+              }
+            </div>
+
+            {/* Right column: AI response */}
+            <div className="agent-section">
+              <div className="agent-section-header">
+                <span className="agent-section-icon" style={{background:'rgba(139,92,246,0.15)',color:'var(--accent-purple)'}}>◎</span>
+                <div>
+                  <div className="agent-section-title">From AI</div>
+                  <div className="agent-section-count">Groq · llama-3.3-70b-versatile</div>
+                </div>
+              </div>
+              {result.aiError
+                ? <div className="agent-empty" style={{color: result.aiError.includes('limit') || result.aiError.includes('blocked') ? 'var(--accent-red)' : 'var(--accent-orange)'}}>
+                    {result.aiError.includes('limit') ? '🔒 Daily AI token limit reached. Your limit resets at midnight.'
+                      : result.aiError.includes('blocked') ? '⊘ AI access has been disabled for your account by an administrator.'
+                      : '⚠ AI response unavailable right now. Try again shortly.'}
+                  </div>
+                : <>
+                    <div className="agent-ai-body"><LearnMarkdown text={result.aiResponse} /></div>
+                    <div className="agent-ai-footer">◎ Powered by AI — may not reflect real-time data</div>
+                  </>
+              }
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── LEARN AI ────────────────────────────────────────────────────────
+function inlineFmt(text) {
+  const parts = [];
+  let rem = text, k = 0;
+  while (rem) {
+    const m = rem.match(/\*\*([^*]+)\*\*/);
+    if (!m) { parts.push(rem); break; }
+    if (m.index > 0) parts.push(rem.slice(0, m.index));
+    parts.push(<strong key={k++} style={{fontWeight:700}}>{m[1]}</strong>);
+    rem = rem.slice(m.index + m[0].length);
+  }
+  return parts;
+}
+
+function LearnMarkdown({ text }) {
+  const elements = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const t = raw.trim();
+    if (!t || /^[=\-]{3,}$/.test(t)) { elements.push(<div key={i} style={{height:6}}/>); continue; }
+    const h = t.match(/^(#{1,4})\s+(.+)/);
+    if (h) {
+      const sz = [16,14,13,13][h[1].length-1];
+      elements.push(<div key={i} style={{fontWeight:700,fontSize:sz,color:'var(--text-primary)',marginTop:i>0?12:2,marginBottom:3,lineHeight:1.3}}>{inlineFmt(h[2])}</div>);
+      continue;
+    }
+    const bl = t.match(/^[-*]\s+(.+)/);
+    if (bl) {
+      elements.push(<div key={i} style={{display:'flex',gap:8,paddingLeft:8,marginTop:3,alignItems:'flex-start'}}><span style={{color:'var(--accent-cyan)',flexShrink:0,fontSize:9,marginTop:4}}>●</span><span>{inlineFmt(bl[1])}</span></div>);
+      continue;
+    }
+    const nl = t.match(/^(\d+)\.\s+(.+)/);
+    if (nl) {
+      elements.push(<div key={i} style={{display:'flex',gap:8,paddingLeft:8,marginTop:3,alignItems:'flex-start'}}><span style={{color:'var(--accent-cyan)',flexShrink:0,fontFamily:"'JetBrains Mono',monospace",fontSize:11,marginTop:1}}>{nl[1]}.</span><span>{inlineFmt(nl[2])}</span></div>);
+      continue;
+    }
+    elements.push(<div key={i} style={{marginTop:1,lineHeight:1.65}}>{inlineFmt(t)}</div>);
+  }
+  return <>{elements}</>;
+}
+
+
+function WeekForm({ week, stages, defaultMonthId, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    month_id: week?.month_id || defaultMonthId || (stages[0]?.id ?? ''),
+    title: week?.title || '',
+    description: week?.description || '',
+    week_number: week?.week_number || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.title.trim()) { setErr('Title required'); return; }
+    setSaving(true); setErr('');
+    try {
+      if (week?.id) await api.updateWeek(week.id, { ...form, month_id: form.month_id || null, week_number: Number(form.week_number) || 0 });
+      else await api.createWeek({ ...form, month_id: form.month_id || null, week_number: Number(form.week_number) || 0 });
+      onSave();
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="stage-form-overlay" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="stage-form-card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{fontSize:15,fontWeight:700,color:'var(--text-primary)'}}>{week?.id ? 'Edit Week' : 'Add Week'}</div>
+          <button className="user-action-btn" onClick={onCancel}>✕</button>
+        </div>
+        {err && <div style={{color:'var(--accent-red)',fontSize:12,marginBottom:12}}>{err}</div>}
+        <form onSubmit={handleSave} style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div className="form-group">
+            <label className="form-label">Month <span style={{color:'var(--accent-red)'}}>*</span></label>
+            <select className="form-select" value={form.month_id} onChange={e=>setForm(f=>({...f,month_id:e.target.value}))}>
+              <option value="">— Select month —</option>
+              {stages.map(m=><option key={m.id} value={m.id}>{m.title}{m.subtitle?` — ${m.subtitle}`:''}</option>)}
+            </select>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'80px 1fr',gap:12}}>
+            <div className="form-group" style={{marginBottom:0}}>
+              <label className="form-label">Week #</label>
+              <input className="form-input" type="number" min="1" value={form.week_number} onChange={e=>setForm(f=>({...f,week_number:e.target.value}))} placeholder="e.g. 5" />
+            </div>
+            <div className="form-group" style={{marginBottom:0}}>
+              <label className="form-label">Title <span style={{color:'var(--accent-red)'}}>*</span></label>
+              <input className="form-input" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="e.g. Python Basics" />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Description</label>
+            <textarea className="form-textarea" rows={3} value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Short description of what this week covers..." />
+          </div>
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end',marginTop:4}}>
+            <button type="button" className="user-action-btn" onClick={onCancel}>Cancel</button>
+            <button type="submit" className="btn-primary btn-sm" disabled={saving}>{saving?'Saving…':week?.id?'Update Week':'Add Week'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function StageForm({ stage, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    title: stage?.title || '',
+    subtitle: stage?.subtitle || '',
+    description: stage?.description || '',
+    difficulty_start: stage?.difficulty_start || 'Beginner',
+    difficulty_end: stage?.difficulty_end || 'Beginner',
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const DIFFS = ['Beginner', 'Intermediate', 'Advanced'];
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.title.trim()) { setErr('Title is required'); return; }
+    setSaving(true);
+    try {
+      if (stage?.id) await api.updateStage(stage.id, form);
+      else await api.createStage(form);
+      onSave();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="stage-form-overlay" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="stage-form-card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{fontSize:15,fontWeight:700,color:'var(--text-primary)'}}>{stage?.id ? 'Edit Stage' : 'Add Stage'}</div>
+          <button className="user-action-btn" onClick={onCancel}>✕</button>
+        </div>
+        {err && <div style={{color:'var(--accent-red)',fontSize:12,marginBottom:12}}>{err}</div>}
+        <form onSubmit={handleSave} style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div className="form-group">
+            <label className="form-label">Stage Title *</label>
+            <input className="form-input" value={form.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. Deep Learning" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Subtitle / Theme</label>
+            <input className="form-input" value={form.subtitle} onChange={e=>set('subtitle',e.target.value)} placeholder="e.g. Foundations, Core Machine Learning" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Description</label>
+            <textarea className="form-input" rows={3} value={form.description} onChange={e=>set('description',e.target.value)} placeholder="Brief overview of what this stage covers..." style={{resize:'vertical'}}/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div className="form-group">
+              <label className="form-label">Difficulty Start</label>
+              <select className="form-select" value={form.difficulty_start} onChange={e=>set('difficulty_start',e.target.value)}>
+                {DIFFS.map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Difficulty End</label>
+              <select className="form-select" value={form.difficulty_end} onChange={e=>set('difficulty_end',e.target.value)}>
+                {DIFFS.map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end',marginTop:4}}>
+            <button type="button" className="user-action-btn" onClick={onCancel}>Cancel</button>
+            <button type="submit" className="btn-primary btn-sm" disabled={saving}>{saving?'Saving…':stage?.id?'Update Stage':'Add Stage'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ResourceForm({ resource, stages, weeks, defaultWeekId, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    title: resource?.title || '',
+    description: resource?.description || '',
+    url: resource?.url || '',
+    category: resource?.category || 'AI Basics',
+    resource_type: resource?.resource_type || 'website',
+    difficulty: resource?.difficulty || 'Beginner',
+    is_free: resource?.is_free !== undefined ? !!resource.is_free : true,
+    week_id: defaultWeekId || resource?.week_id || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.url.trim()) { setErr('Title and URL are required.'); return; }
+    setSaving(true); setErr('');
+    try {
+      const payload = { ...form, week_id: form.week_id || null };
+      if (resource?.id) await api.updateLearnResource(resource.id, payload);
+      else await api.addLearnResource(payload);
+      onSave();
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="learn-form-overlay" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="learn-form-card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{fontSize:15,fontWeight:700,color:'var(--text-primary)'}}>{resource?.id ? 'Edit Resource' : 'Add Resource'}</div>
+          <span onClick={onCancel} style={{color:'var(--text-muted)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</span>
+        </div>
+        {err && <div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:7,padding:'8px 12px',fontSize:12,color:'var(--accent-red)',marginBottom:14}}>{err}</div>}
+        <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div className="form-group">
+            <label className="form-label">Title <span style={{color:'var(--accent-red)'}}>*</span></label>
+            <input className="form-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Andrej Karpathy's Neural Networks course" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">URL <span style={{color:'var(--accent-red)'}}>*</span></label>
+            <input className="form-input" value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Description</label>
+            <textarea className="form-textarea" rows={2} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description (optional)" />
+          </div>
+          {weeks && weeks.length > 0 && (
+            <div className="form-group">
+              <label className="form-label">Week</label>
+              <select className="form-select" value={form.week_id} onChange={e => set('week_id', e.target.value ? Number(e.target.value) : '')}>
+                <option value="">— Unassigned —</option>
+                {stages.map(month => {
+                  const mw = weeks.filter(w => w.month_id === month.id);
+                  return mw.length > 0 ? (
+                    <optgroup key={month.id} label={`${month.title}${month.subtitle ? ' — ' + month.subtitle : ''}`}>
+                      {mw.map(w => <option key={w.id} value={w.id}>Week {w.week_number}: {w.title}</option>)}
+                    </optgroup>
+                  ) : null;
+                })}
+              </select>
+            </div>
+          )}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div className="form-group">
+              <label className="form-label">Category</label>
+              <select className="form-select" value={form.category} onChange={e => set('category', e.target.value)}>
+                {LEARN_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Type</label>
+              <select className="form-select" value={form.resource_type} onChange={e => set('resource_type', e.target.value)}>
+                {LEARN_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Difficulty</label>
+              <select className="form-select" value={form.difficulty} onChange={e => set('difficulty', e.target.value)}>
+                {LEARN_DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:'var(--text-secondary)',paddingBottom:4}}>
+                <input type="checkbox" checked={form.is_free} onChange={e => set('is_free', e.target.checked)} style={{width:14,height:14,accentColor:'var(--accent-cyan)'}} />
+                Free resource
+              </label>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end',marginTop:4}}>
+            <button type="button" className="btn-sm" onClick={onCancel} style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text-secondary)',borderRadius:7,padding:'7px 16px',cursor:'pointer',fontSize:13}}>Cancel</button>
+            <button type="submit" className="btn-primary btn-sm" disabled={saving}>
+              {saving ? <><span className="spinner" style={{width:12,height:12,borderWidth:2}}/> Saving...</> : (resource?.id ? 'Save Changes' : 'Add Resource')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function LearnResourceCard({ resource, isAdmin, onEdit, onDelete }) {
+  const diffColor = LEARN_DIFF_COLORS[resource.difficulty] || 'var(--text-muted)';
+  return (
+    <div className="learn-resource-card">
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
+        <div className="learn-resource-title">{resource.title}</div>
+        {isAdmin && (
+          <div style={{display:'flex',gap:5,flexShrink:0}}>
+            <button className="user-action-btn" onClick={() => onEdit(resource)} title="Edit">✎</button>
+            <button className="user-action-btn danger" onClick={() => { if (window.confirm('Delete this resource?')) onDelete(resource.id); }} title="Delete">✕</button>
+          </div>
+        )}
+      </div>
+      {resource.description && <div className="learn-resource-desc">{resource.description}</div>}
+      <div className="learn-resource-footer">
+        <span className="learn-diff-badge" style={{background:`${diffColor}18`,color:diffColor}}>{resource.difficulty}</span>
+        <span className="learn-type-badge">{LEARN_TYPE_ICONS[resource.resource_type] || '◇'} {resource.resource_type}</span>
+        <span className="learn-cat-badge">{resource.category}</span>
+        {resource.resource_type === 'course' && (
+          <span className="learn-free-badge" style={{background:resource.is_free?'rgba(16,185,129,0.12)':'rgba(245,158,11,0.12)',color:resource.is_free?'var(--accent-green)':'var(--accent-orange)'}}>
+            {resource.is_free ? 'Free' : 'Paid'}
+          </span>
+        )}
+        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="learn-resource-open-btn">↗ Open</a>
+      </div>
+    </div>
+  );
+}
+
+function LearnAI({ isAdmin, initialWeekId, onBack }) {
+  const [mode, setMode] = useState('chat');
+  const [resources, setResources] = useState([]);
+  const [stages, setStages] = useState([]);
+  const [weeks, setWeeks] = useState([]);
+  const [expandedWeek, setExpandedWeek] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [showStageForm, setShowStageForm] = useState(false);
+  const [editingStage, setEditingStage] = useState(null);
+  const [showWeekForm, setShowWeekForm] = useState(false);
+  const [editingWeek, setEditingWeek] = useState(null);
+  const [defaultMonthId, setDefaultMonthId] = useState(null);
+  const [defaultWeekId, setDefaultWeekId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filterDiff, setFilterDiff] = useState('All');
+  const [showForm, setShowForm] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
+  const [chatDifficulty, setChatDifficulty] = useState('Beginner');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatHeight, setChatHeight] = useState(null);
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+
+  useEffect(() => { loadResources(); loadStages(); loadWeeks(); }, []);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+  // Auto-open a specific week when navigated from AI Agent learn resource
+  useEffect(() => {
+    if (!initialWeekId || !weeks.length || !stages.length || selectedWeek) return;
+    const week = weeks.find(w => w.id === initialWeekId);
+    if (!week) return;
+    const sortedStages = stages.slice().sort((a, b) => a.position - b.position);
+    const mi = sortedStages.findIndex(s => s.id === week.month_id);
+    setSelectedWeek({ ...week, _mi: mi });
+    setMode('curated');
+  }, [weeks, stages, initialWeekId]); // eslint-disable-line
+
+  async function loadResources() {
+    setLoading(true);
+    setLoadError(null);
+    try { setResources(await api.fetchLearnResources()); }
+    catch (e) { console.error(e); setLoadError(e.message || 'Failed to load resources'); }
+    finally { setLoading(false); }
+  }
+
+  async function loadStages() {
+    try {
+      const s = await api.fetchStages();
+      setStages(s);
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadWeeks() {
+    try {
+      const w = await api.fetchWeeks();
+      setWeeks(w);
+    } catch (e) {
+      console.error('loadWeeks error:', e);
+    }
+  }
+
+  async function sendMessage(text, baseHistory) {
+    setChatLoading(true);
+    try {
+      const reply = await api.learnChat(baseHistory, chatDifficulty);
+      setChatMessages(m => [...m, { role: 'assistant', content: reply }]);
+    } catch (e) {
+      setChatMessages(m => [...m, { role: 'assistant', content: `⚠ ${e.message || 'An error occurred. Please try again.'}` }]);
+    } finally { setChatLoading(false); }
+  }
+
+  async function handleSend() {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = { role: 'user', content: chatInput.trim() };
+    const history = [...chatMessages, userMsg];
+    setChatMessages(history);
+    setChatInput('');
+    await sendMessage(chatInput.trim(), history);
+  }
+
+  async function handleSuggestion(prompt) {
+    if (chatLoading) return;
+    const userMsg = { role: 'user', content: prompt };
+    const history = [...chatMessages, userMsg];
+    setChatMessages(history);
+    await sendMessage(prompt, history);
+  }
+
+  function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }
+
+  function startChatResize(e) {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = chatContainerRef.current?.getBoundingClientRect().height ?? 520;
+    const onMove = (mv) => {
+      const delta = mv.clientY - startY;
+      setChatHeight(Math.max(300, Math.min(window.innerHeight - 180, startH + delta)));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  return (
+    <>
+    <div className="fade-in">
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+        {onBack && (
+          <div className="header-back-btn" onClick={onBack}>← Back</div>
+        )}
+        <div className="learn-mode-toggle" style={{margin:0}}>
+          <button className={`learn-mode-btn${mode==='chat'?' active':''}`} onClick={() => setMode('chat')}>◆ AI Tutor</button>
+          <button className={`learn-mode-btn${mode==='curated'?' active':''}`} onClick={() => setMode('curated')}>◈ Curated Resources</button>
+        </div>
+      </div>
+
+      {mode === 'curated' && <>
+        {/* Admin bar */}
+        {isAdmin && (
+          <div className="stages-admin-top">
+            <span style={{fontSize:11,color:'var(--accent-red)',fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>ADMIN</span>
+            <span style={{fontSize:12,color:'var(--text-secondary)'}}>{stages.length} month{stages.length!==1?'s':''} · {weeks.length} week{weeks.length!==1?'s':''}</span>
+            <button className="btn-primary btn-sm" style={{marginLeft:'auto'}} onClick={()=>{setEditingStage(null);setShowStageForm(true);}}>＋ Add Month</button>
+            <button className="user-action-btn" onClick={()=>{setDefaultMonthId(null);setEditingWeek(null);setShowWeekForm(true);}}>＋ Add Week</button>
+            <button className="user-action-btn" onClick={()=>{setShowForm(true);setEditingResource(null);setDefaultWeekId(null);}}>＋ Add Resource</button>
+          </div>
+        )}
+
+        {!selectedWeek && <>
+        {/* Search + Filters */}
+        <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
+          <input className="filter-input" placeholder="Search resources..." value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:160}}/>
+          <div style={{display:'flex',gap:6}}>
+            {['All','Beginner','Intermediate','Advanced'].map(l => {
+              const ac = l==='Beginner'?'var(--accent-green)':l==='Intermediate'?'var(--accent-orange)':l==='Advanced'?'var(--accent-red)':null;
+              return <button key={l} className="roadmap-level-pill" onClick={()=>setFilterDiff(l)}
+                style={filterDiff===l?{background:ac||'var(--accent-blue)',color:'#fff',borderColor:ac||'transparent',boxShadow:`0 0 12px ${ac||'var(--glow-blue)'}`}:{}}>{l}</button>;
+            })}
+          </div>
+        </div>
+
+        {/* AI Engineer Roadmap */}
+        {loading
+          ? <div style={{textAlign:'center',padding:60}}><span className="spinner" style={{width:28,height:28,borderWidth:3}}/></div>
+          : loadError
+            ? <div className="learn-empty" style={{color:'var(--accent-red)'}}>⚠ {loadError}</div>
+            : stages.length === 0 && weeks.length === 0
+              ? <div className="learn-empty">{isAdmin ? 'No months yet. Click ＋ Add Month to start.' : 'Roadmap coming soon.'}</div>
+              : (() => {
+                  const monthNodes = stages
+                    .slice()
+                    .sort((a, b) => a.position - b.position)
+                    .map((month, mi) => {
+                      const monthWeeks = weeks
+                        .filter(w => w.month_id === month.id)
+                        .sort((a, b) => a.position - b.position || a.week_number - b.week_number);
+
+                      // Month-level difficulty filter: months 1-2=Beginner, 3-4=Intermediate, 5-6=Advanced
+                      const monthDiff = mi < 2 ? 'Beginner' : mi < 4 ? 'Intermediate' : 'Advanced';
+                      if (filterDiff !== 'All' && monthDiff !== filterDiff) return null;
+
+                      const filteredWeeks = monthWeeks.filter(week => {
+                        if (!search) return true;
+                        const wRes = resources.filter(r => r.week_id === week.id);
+                        const s = search.toLowerCase();
+                        const matchWeek = week.title.toLowerCase().includes(s) || (week.description||'').toLowerCase().includes(s);
+                        const matchRes = wRes.some(r => r.title.toLowerCase().includes(s) || (r.description||'').toLowerCase().includes(s));
+                        return matchWeek || matchRes;
+                      });
+
+                      if (search && filteredWeeks.length === 0) return null;
+                      const palette = STAGE_PALETTE[mi % STAGE_PALETTE.length];
+
+                      const mid = Math.floor(filteredWeeks.length / 2);
+                      const aboveWeeks = filteredWeeks.slice(0, mid);
+                      const belowWeeks = filteredWeeks.slice(mid);
+
+                      // Renders a single week card — clicking shows resources inline
+                      const renderCard = (week) => {
+                        return (
+                          <div key={week.id} style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+                            <div className="rm-week-card" style={{flex:1}} onClick={() => setSelectedWeek({...week, _mi: mi})}>
+                              <div className="rm-week-top">
+                                <div className="rm-week-badge" style={{background:palette.color}}>WEEK {week.week_number||''}</div>
+                                <div className="rm-week-info">
+                                  <div className="rm-week-title">{week.title}</div>
+                                  {week.description && <div className="rm-week-desc">{week.description}</div>}
+                                </div>
+                                <div style={{fontSize:11,color:'var(--text-muted)',flexShrink:0,marginTop:2}}>↗</div>
+                              </div>
+                              {isAdmin && (
+                                <div style={{display:'flex',gap:3,padding:'5px 10px',borderTop:'1px solid var(--border)'}} onClick={e=>e.stopPropagation()}>
+                                  <button className="user-action-btn" style={{fontSize:9,padding:'2px 6px'}} onClick={()=>{setEditingWeek(week);setShowWeekForm(true);}}>Edit</button>
+                                  <button className="user-action-btn" style={{fontSize:9,padding:'2px 6px',color:'var(--accent-red)'}} onClick={async()=>{if(!confirm(`Delete week "${week.title}"?`))return;await api.deleteWeek(week.id);await loadWeeks();await loadResources();}}>Del</button>
+                                  <button className="user-action-btn" style={{fontSize:9,padding:'2px 6px'}} onClick={()=>{setDefaultWeekId(week.id);setEditingResource(null);setShowForm(true);}}>＋ Res</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      };
+
+                      // Tentacle arms: upside-down ⋂ (above) or ⋃ (below)
+                      // marginLeft/Right = calc(25% - 4px) aligns the arms with the center of each flex:1 card
+                      // (exact for gap:14px: card_center = (total-14)/4 = 25% - 3.5px ≈ calc(25% - 4px))
+                      const armsAbove = aboveWeeks.length >= 2 ? (
+                        <div style={{
+                          marginLeft:'calc(25% - 4px)', marginRight:'calc(25% - 4px)',
+                          height:30, borderLeft:`2px solid ${palette.color}`,
+                          borderRight:`2px solid ${palette.color}`, borderBottom:`2px solid ${palette.color}`,
+                          borderBottomLeftRadius:8, borderBottomRightRadius:8,
+                        }} />
+                      ) : aboveWeeks.length === 1 ? (
+                        <div style={{width:2, height:30, background:palette.color, margin:'0 auto'}} />
+                      ) : null;
+
+                      const armsBelow = belowWeeks.length >= 2 ? (
+                        <div style={{
+                          marginLeft:'calc(25% - 4px)', marginRight:'calc(25% - 4px)',
+                          height:30, borderLeft:`2px solid ${palette.color}`,
+                          borderRight:`2px solid ${palette.color}`, borderTop:`2px solid ${palette.color}`,
+                          borderTopLeftRadius:8, borderTopRightRadius:8,
+                        }} />
+                      ) : belowWeeks.length === 1 ? (
+                        <div style={{width:2, height:30, background:palette.color, margin:'0 auto'}} />
+                      ) : null;
+
+                      // Short stem connecting arms to month box
+                      const stem = <div style={{width:2, height:16, background:palette.color, margin:'0 auto'}} />;
+
+                      return (
+                        <div key={month.id} className="rm-month-section">
+                          {/* Above week cards: 2-column flex row */}
+                          {aboveWeeks.length > 0 && (
+                            <div className="rm-weeks-row">{aboveWeeks.map(renderCard)}</div>
+                          )}
+                          {/* Tentacle arms + stem DOWN to month box */}
+                          {aboveWeeks.length > 0 && <>{armsAbove}{stem}</>}
+
+                          {/* Month box — the octopus body */}
+                          <div className="rm-month-node">
+                            <div className="rm-month-box" style={{borderColor:palette.color,boxShadow:`0 6px 28px ${palette.glow}`}}>
+                              <div className="rm-month-tag" style={{color:palette.color}}>{month.title}</div>
+                              <div className="rm-month-name">{month.subtitle || month.description || month.title}</div>
+                              {isAdmin && (
+                                <div className="rm-month-admin">
+                                  <button className="user-action-btn" style={{fontSize:9,padding:'2px 6px'}} onClick={()=>{setEditingStage(month);setShowStageForm(true);}}>Edit</button>
+                                  <button className="user-action-btn" style={{fontSize:9,padding:'2px 6px',color:'var(--accent-red)'}} onClick={async()=>{if(!confirm(`Delete "${month.title}"?`))return;await api.deleteStage(month.id);await loadStages();await loadWeeks();}}>Del</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stem DOWN from month box + tentacle arms to below weeks */}
+                          {belowWeeks.length > 0 && <>{stem}{armsBelow}</>}
+                          {/* Below week cards: 2-column flex row */}
+                          {belowWeeks.length > 0 && (
+                            <div className="rm-weeks-row">{belowWeeks.map(renderCard)}</div>
+                          )}
+
+                          {isAdmin && (
+                            <div className="rm-month-add-week">
+                              <button className="rm-add-week-btn" onClick={()=>{setDefaultMonthId(month.id);setEditingWeek(null);setShowWeekForm(true);}}>
+                                ＋ Add Week to {month.title}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+
+                  const sortedStages = stages.slice().sort((a, b) => a.position - b.position);
+                  const spineColors = sortedStages.map((_, mi) => STAGE_PALETTE[mi % STAGE_PALETTE.length].color);
+                  const n = spineColors.length;
+                  const spineGrad = n === 0 ? 'var(--border)' :
+                    `linear-gradient(180deg, transparent 0%, ${
+                      spineColors.map((c, i) => `${c} ${Math.round(8 + (i / Math.max(n - 1, 1)) * 84)}%`).join(', ')
+                    }, transparent 100%)`;
+
+                  return (
+                    <div className="rm-outer">
+                      <div className="rm-spine" style={{background: spineGrad}} />
+                      <div className="rm-center"><div className="rm-badge-start">◆ START</div></div>
+                      {monthNodes}
+                      <div className="rm-center"><div className="rm-badge-start rm-badge-finish">◆ FINISH</div></div>
+                    </div>
+                  );
+                })()
+        }
+        </>}
+
+        {selectedWeek && (() => {
+          const swMi = stages.slice().sort((a,b) => a.position - b.position).findIndex(s => s.id === selectedWeek.month_id);
+          const swPalette = STAGE_PALETTE[Math.max(0, swMi) % STAGE_PALETTE.length];
+          const weekRes = resources.filter(r => r.week_id === selectedWeek.id);
+          return (
+            <div className="fade-in">
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+                <button className="user-action-btn" style={{fontSize:12,padding:'5px 12px',display:'flex',alignItems:'center',gap:6}} onClick={() => setSelectedWeek(null)}>
+                  ← Back to Roadmap
+                </button>
+                <div style={{fontSize:11,color:'var(--text-muted)'}}>Week {selectedWeek.week_number}</div>
+              </div>
+              <div style={{display:'inline-block',background:swPalette.color+'22',color:swPalette.color,border:`1px solid ${swPalette.color}55`,borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",letterSpacing:'.5px',marginBottom:10}}>
+                WEEK {selectedWeek.week_number}
+              </div>
+              <div style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',marginBottom:6}}>{selectedWeek.title}</div>
+              {selectedWeek.description && <div style={{fontSize:13,color:'var(--text-muted)',lineHeight:1.6,marginBottom:20}}>{selectedWeek.description}</div>}
+              {isAdmin && (
+                <div style={{display:'flex',gap:6,marginBottom:16}}>
+                  <button className="user-action-btn" style={{fontSize:10}} onClick={()=>{setEditingWeek(selectedWeek);setShowWeekForm(true);}}>Edit week</button>
+                  <button className="user-action-btn" style={{fontSize:10,color:'var(--accent-red)'}} onClick={async()=>{if(!confirm(`Delete week "${selectedWeek.title}"?`))return;await api.deleteWeek(selectedWeek.id);setSelectedWeek(null);await loadWeeks();await loadResources();}}>Delete week</button>
+                  <button className="user-action-btn" style={{fontSize:10}} onClick={()=>{setDefaultWeekId(selectedWeek.id);setEditingResource(null);setShowForm(true);}}>＋ Add Resource</button>
+                </div>
+              )}
+              {weekRes.length === 0
+                ? <div className="learn-empty">No resources yet{isAdmin ? ' — click ＋ Add Resource above.' : '.'}</div>
+                : weekRes.map(r => (
+                    <div key={r.id} className="rm-res-item" style={{marginBottom:10}}>
+                      <div className="rm-res-icon" style={{color:swPalette.color}}>{LEARN_TYPE_ICONS[r.resource_type]||'◆'}</div>
+                      <div className="rm-res-body">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="rm-res-link">{r.title}</a>
+                        {r.description && <div className="rm-res-sdesc">{r.description}</div>}
+                        <div className="rm-res-badges">
+                          <span className="rm-res-badge">{r.resource_type}</span>
+                          <span className="rm-res-badge" style={{color:LEARN_DIFF_COLORS[r.difficulty]||'var(--text-muted)'}}>{r.difficulty}</span>
+                          {r.is_free ? <span className="rm-res-badge rm-res-badge-free">FREE</span> : <span className="rm-res-badge">Paid</span>}
+                        </div>
+                      </div>
+                      {isAdmin && (
+                        <div className="rm-res-adm">
+                          <button className="user-action-btn" style={{fontSize:8,padding:'1px 5px'}} onClick={()=>{setEditingResource(r);setShowForm(true);}}>Edit</button>
+                          <button className="user-action-btn" style={{fontSize:8,padding:'1px 5px',color:'var(--accent-red)'}} onClick={async()=>{await api.deleteLearnResource(r.id);setResources(rs=>rs.filter(x=>x.id!==r.id));}}>Del</button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              }
+            </div>
+          );
+        })()}
+      </>}
+
+      {mode === 'chat' && <>
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:6,fontFamily:"'JetBrains Mono',monospace",textTransform:'uppercase',letterSpacing:'1px'}}>Explanation Level</div>
+          <div className="learn-diff-bar">
+            {['Kid-friendly','Beginner','Intermediate','Advanced'].map(d => (
+              <button key={d} className={`learn-diff-btn${chatDifficulty===d?' active':''}`} onClick={() => setChatDifficulty(d)}>{d}</button>
+            ))}
+          </div>
+        </div>
+        <div className="learn-chat-container" ref={chatContainerRef} style={chatHeight ? {height:chatHeight,maxHeight:'none'} : {}}>
+          <div className="learn-chat-header">
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:'var(--text-primary)'}}>AI Tutor</div>
+              <div style={{fontSize:11,color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace"}}>Powered by Groq · {chatDifficulty} mode</div>
+            </div>
+            {chatMessages.length > 0 && <button className="user-action-btn" onClick={() => setChatMessages([])}>Clear chat</button>}
+          </div>
+          <div className="learn-chat-messages">
+            {chatMessages.length === 0
+              ? <div style={{padding:'4px 0'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,paddingBottom:16,borderBottom:'1px solid var(--border)'}}>
+                    <div style={{width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,var(--accent-blue),var(--accent-cyan))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,boxShadow:'0 0 20px var(--glow-blue)'}}>◎</div>
+                    <div>
+                      <div style={{fontSize:15,fontWeight:700,color:'var(--text-primary)',letterSpacing:'-0.2px'}}>Your Personal AI Tutor</div>
+                      <div style={{fontSize:11,color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>Ask anything · Groq-powered · {chatDifficulty} mode</div>
+                    </div>
+                  </div>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace",textTransform:'uppercase',letterSpacing:'1.2px',marginBottom:10}}>Try asking →</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                    {(LEARN_CHAT_SUGGESTIONS[chatDifficulty] || LEARN_CHAT_SUGGESTIONS.Beginner).map(({q, icon}) => (
+                      <button key={q} onClick={() => handleSuggestion(q)} style={{background:'var(--bg-secondary)',border:'1px solid var(--border)',borderRadius:9,padding:'11px 14px',textAlign:'left',fontSize:12,color:'var(--text-secondary)',cursor:'pointer',transition:'all 0.2s',lineHeight:1.45,fontFamily:"'Outfit',sans-serif",display:'flex',alignItems:'flex-start',gap:8}}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--border-glow)';e.currentTarget.style.color='var(--text-primary)';e.currentTarget.style.background='var(--bg-card-hover)';}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--text-secondary)';e.currentTarget.style.background='var(--bg-secondary)';}}>
+                        <span style={{color:'var(--accent-cyan)',fontSize:11,flexShrink:0,marginTop:1}}>{icon}</span>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              : chatMessages.map((m, i) => (
+                  <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
+                    <div className={`learn-chat-bubble ${m.role}`}>
+                      {m.role==='assistant' ? <LearnMarkdown text={m.content}/> : m.content}
+                    </div>
+                  </div>
+                ))
+            }
+            {chatLoading && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span className="spinner" style={{width:14,height:14,borderWidth:2}}/>
+                <span style={{fontSize:12,color:'var(--text-muted)'}}>Thinking...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef}/>
+          </div>
+          <div className="learn-chat-resize-handle" onMouseDown={startChatResize}>
+            <span style={{color:'var(--text-muted)',fontSize:9,letterSpacing:5,lineHeight:1,pointerEvents:'none'}}>···</span>
+          </div>
+          <div className="learn-chat-input-row">
+            <input className="learn-chat-input" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask about AI, ML, neural networks..." />
+            <button className="learn-chat-send" onClick={handleSend} disabled={chatLoading || !chatInput.trim()}>Send</button>
+          </div>
+        </div>
+      </>}
+
+    </div>
+    {showForm && (
+      <ResourceForm resource={editingResource} stages={stages} weeks={weeks} defaultWeekId={defaultWeekId}
+        onCancel={() => { setShowForm(false); setEditingResource(null); setDefaultWeekId(null); }}
+        onSave={async () => { setShowForm(false); setEditingResource(null); setDefaultWeekId(null); await loadResources(); }} />
+    )}
+    {showStageForm && (
+      <StageForm stage={editingStage}
+        onCancel={() => { setShowStageForm(false); setEditingStage(null); }}
+        onSave={async () => { setShowStageForm(false); setEditingStage(null); await loadStages(); }} />
+    )}
+    {showWeekForm && (
+      <WeekForm
+        week={editingWeek}
+        stages={stages}
+        defaultMonthId={defaultMonthId}
+        onCancel={() => { setShowWeekForm(false); setEditingWeek(null); }}
+        onSave={async () => { setShowWeekForm(false); setEditingWeek(null); await loadWeeks(); }}
+      />
+    )}
+  </>
+  );
+}
+
 // ─── ADMIN PANEL ────────────────────────────────────────────────────
 const SAMPLE_ACTIVITY = [
   { type:"sample", actor:"Alex R.", title:"OpenAI o3-mini benchmark analysis", ts: new Date(Date.now()-1800000).toISOString() },
@@ -1460,6 +2760,8 @@ function AdminPanel({ insights = [], onRefresh }) {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [aiUsage, setAiUsage] = useState(null);
+  const [allUsersAiUsage, setAllUsersAiUsage] = useState([]);
+  const [editingLimit, setEditingLimit] = useState(null); // { id, value }
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSampleActivity, setShowSampleActivity] = useState(() => !localStorage.getItem(LS_ACTIVITY_KEY));
@@ -1540,8 +2842,8 @@ function AdminPanel({ insights = [], onRefresh }) {
   useEffect(() => {
     (async () => {
       try {
-        const [u, s, a, usage] = await Promise.all([api.fetchUsers(), api.fetchAdminStats(), api.fetchAdminActivity(), api.fetchAiUsageStats()]);
-        setUsers(u); setStats(s); setActivity(a); setAiUsage(usage);
+        const [u, s, a, usage, allAi] = await Promise.all([api.fetchUsers(), api.fetchAdminStats(), api.fetchAdminActivity(), api.fetchAiUsageStats(), api.fetchAllUsersAiUsage()]);
+        setUsers(u); setStats(s); setActivity(a); setAiUsage(usage); setAllUsersAiUsage(allAi);
       } catch (err) { console.error('Admin load error:', err); }
       setLoading(false);
     })();
@@ -1696,9 +2998,12 @@ function AdminPanel({ insights = [], onRefresh }) {
             <div className="ai-usage-grid">
               {[
                 { label: "AI Requests Today", val: aiUsage?.requestsToday ?? "—", color: "var(--accent-cyan)" },
-                { label: "Tokens Used Today", val: aiUsage?.tokensToday ?? "—", color: "var(--accent-blue)" },
+                { label: "Tokens Used Today", val: aiUsage?.tokensToday?.toLocaleString() ?? "—", color: "var(--accent-blue)" },
                 { label: "Summaries Generated", val: aiUsage?.summariesToday ?? "—", color: "var(--accent-purple)" },
                 { label: "Reports Generated", val: aiUsage?.reportsToday ?? "—", color: "var(--accent-green)" },
+                { label: "AI Agent Queries", val: aiUsage?.agentToday ?? "—", color: "var(--accent-cyan)" },
+                { label: "Learn AI Sessions", val: aiUsage?.learnToday ?? "—", color: "var(--accent-blue)" },
+                { label: "Cost Today", val: aiUsage?.tokensToday != null ? `$${(aiUsage.tokensToday * 0.0000007).toFixed(4)}` : "—", color: "var(--accent-orange)" },
               ].map((m, i) => (
                 <div key={i} className="ai-usage-card" style={{"--u-color": m.color}}>
                   <div className="ai-usage-val">{m.val}</div>
@@ -1739,6 +3044,93 @@ function AdminPanel({ insights = [], onRefresh }) {
             </div>
           </div>
         )}
+
+        {/* Per-user AI Usage Table */}
+        {allUsersAiUsage.length > 0 && (
+          <div className="admin-card" style={{marginTop:0}}>
+            <div className="admin-card-title">Per-User AI Usage & Controls</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                <thead>
+                  <tr style={{borderBottom:'1px solid var(--border)'}}>
+                    {['User','Tokens Today','Daily Limit','Usage','Cost Today','Cost All-Time','AI Status','Actions'].map(h => (
+                      <th key={h} style={{textAlign:'left',padding:'6px 10px',fontSize:10,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...allUsersAiUsage].sort((a, b) => b.tokensToday - a.tokensToday).map(u => (
+                    <tr key={u.id} style={{borderBottom:'1px solid var(--border)',background: u.blocked ? 'rgba(239,68,68,0.04)' : u.pct >= 100 ? 'rgba(245,158,11,0.04)' : 'transparent'}}>
+                      <td style={{padding:'8px 10px'}}>
+                        <div style={{fontWeight:600,color:'var(--text-primary)'}}>{u.name}</div>
+                        <div style={{fontSize:11,color:'var(--text-muted)'}}>{u.email}</div>
+                      </td>
+                      <td style={{padding:'8px 10px',fontFamily:"'JetBrains Mono',monospace",color: u.pct >= 100 ? 'var(--accent-orange)' : 'var(--text-primary)'}}>{u.tokensToday.toLocaleString()}</td>
+                      <td style={{padding:'8px 10px'}}>
+                        {editingLimit?.id === u.id ? (
+                          <div style={{display:'flex',gap:4,alignItems:'center'}}>
+                            <input type="number" value={editingLimit.value} onChange={e => setEditingLimit(el => ({...el, value: e.target.value}))}
+                              style={{width:80,padding:'2px 6px',background:'var(--bg-primary)',border:'1px solid var(--accent-cyan)',borderRadius:4,color:'var(--text-primary)',fontSize:12,fontFamily:"'JetBrains Mono',monospace"}}/>
+                            <button className="user-action-btn" onClick={async () => {
+                              try {
+                                const updated = await api.updateUserAiLimit(u.id, parseInt(editingLimit.value));
+                                setAllUsersAiUsage(prev => prev.map(x => x.id === u.id ? {...x, limit: updated.daily_token_limit, remaining: Math.max(0, updated.daily_token_limit - x.tokensToday), pct: Math.min(100, Math.round((x.tokensToday / updated.daily_token_limit) * 100))} : x));
+                                setEditingLimit(null);
+                              } catch(e) { alert(e.message); }
+                            }}>✓</button>
+                            <button className="user-action-btn" onClick={() => setEditingLimit(null)}>✕</button>
+                          </div>
+                        ) : (
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",cursor:'pointer',color:'var(--text-secondary)'}} onClick={() => setEditingLimit({id: u.id, value: u.limit})}>{u.limit.toLocaleString()} ✎</span>
+                        )}
+                      </td>
+                      <td style={{padding:'8px 10px',minWidth:100}}>
+                        <div style={{height:6,background:'var(--bg-secondary)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)',marginBottom:3}}>
+                          <div style={{height:'100%',borderRadius:3,width:`${u.pct}%`,background: u.pct >= 100 ? 'var(--accent-red)' : u.pct >= 80 ? 'var(--accent-orange)' : 'var(--accent-cyan)'}}/>
+                        </div>
+                        <div style={{fontSize:10,color:'var(--text-muted)',fontFamily:"'JetBrains Mono',monospace"}}>{u.pct}%</div>
+                      </td>
+                      <td style={{padding:'8px 10px',fontFamily:"'JetBrains Mono',monospace",color:'var(--accent-green)',fontSize:12}}>${u.costToday.toFixed(4)}</td>
+                      <td style={{padding:'8px 10px',fontFamily:"'JetBrains Mono',monospace",color:'var(--text-muted)',fontSize:12}}>${u.costAllTime.toFixed(4)}</td>
+                      <td style={{padding:'8px 10px'}}>
+                        {u.blocked
+                          ? <span style={{fontSize:11,padding:'2px 7px',borderRadius:4,background:'rgba(239,68,68,0.12)',color:'var(--accent-red)',border:'1px solid rgba(239,68,68,0.25)',fontWeight:600}}>Blocked</span>
+                          : u.pct >= 100
+                            ? <span style={{fontSize:11,padding:'2px 7px',borderRadius:4,background:'rgba(245,158,11,0.12)',color:'var(--accent-orange)',border:'1px solid rgba(245,158,11,0.25)',fontWeight:600}}>Limit Reached</span>
+                            : <span style={{fontSize:11,padding:'2px 7px',borderRadius:4,background:'rgba(16,185,129,0.1)',color:'var(--accent-green)',border:'1px solid rgba(16,185,129,0.2)',fontWeight:600}}>Active</span>}
+                      </td>
+                      <td style={{padding:'8px 10px'}}>
+                        <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                          <button className={`user-action-btn${u.blocked ? '' : ' danger'}`}
+                            title={u.blocked ? 'Unblock AI' : 'Block AI'}
+                            onClick={async () => {
+                              try {
+                                await api.updateUserAiBlocked(u.id, !u.blocked);
+                                setAllUsersAiUsage(prev => prev.map(x => x.id === u.id ? {...x, blocked: !u.blocked} : x));
+                              } catch(e) { alert(e.message); }
+                            }}>
+                            {u.blocked ? '◉ Unblock AI' : '⊘ Block AI'}
+                          </button>
+                          {u.pct >= 100 && !u.blocked && (
+                            <button className="user-action-btn" title="Double token limit for this user"
+                              onClick={async () => {
+                                try {
+                                  const newLimit = u.limit * 2;
+                                  const updated = await api.updateUserAiLimit(u.id, newLimit);
+                                  setAllUsersAiUsage(prev => prev.map(x => x.id === u.id ? {...x, limit: updated.daily_token_limit, remaining: Math.max(0, updated.daily_token_limit - x.tokensToday), pct: Math.min(100, Math.round((x.tokensToday / updated.daily_token_limit) * 100))} : x));
+                                } catch(e) { alert(e.message); }
+                              }}>↑ Extend</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{marginTop:8,fontSize:11,color:'var(--text-muted)'}}>Cost calculated at $0.70/M tokens (Groq llama-3.3-70b blended rate). Click a limit value to edit it inline. Extend doubles the daily limit.</div>
+          </div>
+        )}
       </>}
 
       {/* ── ACTIVITY ── */}
@@ -1760,8 +3152,8 @@ function AdminPanel({ insights = [], onRefresh }) {
                 const ts = item.ts || "";
                 const type = item.type || "submitted";
                 const badgeClass = `activity-type-badge activity-badge-${type==="sample"?"sample":type}`;
-                const dotColor = type==="reviewed"?"var(--accent-green)":type==="report"?"var(--accent-purple)":type==="sample"?"var(--accent-orange)":"var(--accent-cyan)";
-                const actionText = type==="reviewed"?"reviewed":type==="report"?"generated report":type==="sample"?"·":"submitted";
+                const dotColor = type==="reviewed"?"var(--accent-green)":type==="report"?"var(--accent-purple)":type==="sample"?"var(--accent-orange)":type==="agent"?"var(--accent-blue)":type==="learn"?"var(--accent-green)":"var(--accent-cyan)";
+                const actionText = type==="reviewed"?"reviewed":type==="report"?"generated report":type==="agent"?"queried AI Agent":type==="learn"?"used Learn AI":type==="sample"?"·":"submitted";
                 return (
                   <div key={i} className="activity-item">
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,flexShrink:0,paddingTop:4}}>
@@ -1776,6 +3168,7 @@ function AdminPanel({ insights = [], onRefresh }) {
                       <div style={{display:"flex",alignItems:"center",gap:8,marginTop:3}}>
                         <span className={badgeClass}>{type==="sample"?"sample":type}</span>
                         <span className="activity-meta">{ts?relTime(ts):""}</span>
+                        {item.tokens>0&&<span className="activity-meta" style={{opacity:0.6}}>{item.tokens.toLocaleString()} tokens</span>}
                       </div>
                     </div>
                   </div>
@@ -1912,13 +3305,15 @@ function AdminPanel({ insights = [], onRefresh }) {
 // ─── PROFILE PAGE ───────────────────────────────────────────────────
 function ProfilePage({ user }) {
   const [profile, setProfile] = useState(null);
+  const [aiUsage, setAiUsage] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const p = await api.fetchProfile();
+        const [p, u] = await Promise.all([api.fetchProfile(), api.fetchMyAiUsage()]);
         setProfile(p);
+        setAiUsage(u);
       } catch (err) { console.error('Profile load error:', err); }
       setLoading(false);
     })();
@@ -1960,6 +3355,35 @@ function ProfilePage({ user }) {
         <div className="profile-stat-card"><div className="profile-stat-value" style={{color:"#ff4d6a"}}>{stats.highImpact}</div><div className="profile-stat-label">High Impact Insights</div></div>
         <div className="profile-stat-card"><div className="profile-stat-value" style={{color:"var(--accent-purple)"}}>{stats.reviewed}</div><div className="profile-stat-label">Insights Reviewed</div></div>
       </div>
+
+      {/* AI Usage Card */}
+      {aiUsage && (
+        <div className="detail-section" style={{marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--text-primary)'}}>◆ AI Token Usage Today</span>
+              {aiUsage.blocked && (
+                <span style={{fontSize:11,padding:'2px 8px',borderRadius:4,background:'rgba(239,68,68,0.12)',color:'var(--accent-red)',border:'1px solid rgba(239,68,68,0.25)',fontWeight:600}}>AI Blocked by Admin</span>
+              )}
+            </div>
+            <span style={{fontSize:12,fontFamily:"'JetBrains Mono',monospace",color: aiUsage.pct >= 100 ? 'var(--accent-red)' : aiUsage.pct >= 80 ? 'var(--accent-orange)' : 'var(--text-muted)'}}>
+              {aiUsage.tokensUsed.toLocaleString()} / {aiUsage.limit.toLocaleString()} tokens
+            </span>
+          </div>
+          <div style={{height:8,background:'var(--bg-secondary)',borderRadius:4,overflow:'hidden',border:'1px solid var(--border)'}}>
+            <div style={{
+              height:'100%', borderRadius:4, transition:'width 0.6s ease',
+              width: `${aiUsage.pct}%`,
+              background: aiUsage.pct >= 100 ? 'var(--accent-red)' : aiUsage.pct >= 80 ? 'var(--accent-orange)' : 'linear-gradient(90deg, var(--accent-cyan), var(--accent-blue))',
+            }}/>
+          </div>
+          <div style={{marginTop:6,fontSize:11,color: aiUsage.pct >= 100 ? 'var(--accent-red)' : 'var(--text-muted)'}}>
+            {aiUsage.pct >= 100
+              ? '⚠ Daily limit reached — AI features blocked until midnight'
+              : `${aiUsage.remaining.toLocaleString()} tokens remaining · resets at midnight`}
+          </div>
+        </div>
+      )}
 
       <div className="profile-two-col">
         {/* Left Column: Timeline + Expertise */}
@@ -2070,19 +3494,26 @@ export default function App() {
   const [dragOverDashboard, setDragOverDashboard] = useState(false);
   const [dragSubmitting, setDragSubmitting] = useState(false);
   const [dragToast, setDragToast] = useState(null);
+  const [agentQuery, setAgentQuery] = useState('');
+  const [agentResult, setAgentResult] = useState(null);
+  const [learnWeekId, setLearnWeekId] = useState(null);
+  const [learnResources, setLearnResources] = useState([]);
+  const [navHistory, setNavHistory] = useState([]);
 
   // Fetch insights from API when logged in
   const refreshData = useCallback(async () => {
     if (!user) return;
     try {
-      const [insights, aiSigs, finSigs] = await Promise.all([
+      const [insights, aiSigs, finSigs, lResources] = await Promise.all([
         api.fetchInsights(),
         api.fetchSignals('ai_signal'),
         api.fetchSignals('financial_ai'),
+        api.fetchLearnResources(),
       ]);
       setData(insights);
       setAiDbSignals(aiSigs || []);
       setFinDbSignals(finSigs || []);
+      setLearnResources(lResources || []);
     } catch (err) { console.error('Fetch data failed:', err); }
     setLoadingData(false);
   }, [user]);
@@ -2146,13 +3577,21 @@ export default function App() {
 
   // Listen for auth expiry
   useEffect(() => {
-    const handler = () => { setUser(null); setPage("dashboard"); };
+    const handler = () => { clearUserState(); setUser(null); setPage("dashboard"); };
     window.addEventListener('auth-expired', handler);
     return () => window.removeEventListener('auth-expired', handler);
   }, []);
 
+  const clearUserState = () => {
+    setAgentQuery('');
+    setAgentResult(null);
+    setNavHistory([]);
+    setLearnWeekId(null);
+    setData([]);
+  };
+
   const handleLogin = (u) => { setUser(u); setLoadingData(true); };
-  const handleLogout = () => { api.logout(); setUser(null); setData([]); setPage("dashboard"); };
+  const handleLogout = () => { api.logout(); clearUserState(); setUser(null); setPage("dashboard"); };
 
   // Combine insights with panel signals so Core AI / Fin AI filters show their panel data
   const allIntelligence = useMemo(() => {
@@ -2181,24 +3620,58 @@ export default function App() {
   if (!user) return <LoginPage onLogin={handleLogin} />;
 
   const rc = data.filter(i => i.needs_review).length;
-  const nav = p => { setPage(p); setSel(null); };
-  const navigateFiltered = (filters) => { setDbFilters(filters); setFilterKey(k => k + 1); setSel(null); setPage("database"); };
+  // Sidebar nav — always a fresh top-level navigation, clears history
+  const nav = p => { setNavHistory([]); setPage(p); setSel(null); if (p === 'learn') setLearnWeekId(null); };
+
+  // Internal navigation — pushes current state (including agent state) to history
+  const navigate = (newPage, newSel = null) => {
+    setNavHistory(prev => [...prev, {
+      page, sel,
+      ...(page === 'agent' ? { savedAgentQuery: agentQuery, savedAgentResult: agentResult } : {}),
+    }]);
+    setPage(newPage);
+    setSel(newSel);
+  };
+
+  // Go back — restores page, sel, and agent state if returning to agent
+  const goBack = () => {
+    const prev = navHistory[navHistory.length - 1];
+    if (!prev) return;
+    setNavHistory(h => h.slice(0, -1));
+    setPage(prev.page);
+    setSel(prev.sel ?? null);
+    if (prev.savedAgentQuery !== undefined) setAgentQuery(prev.savedAgentQuery);
+    if (prev.savedAgentResult !== undefined) setAgentResult(prev.savedAgentResult);
+  };
+
+  const navigateFiltered = (filters) => {
+    setNavHistory(prev => [...prev, { page, sel }]);
+    setDbFilters(filters); setFilterKey(k => k + 1); setSel(null); setPage("database");
+  };
+  const navigateToAgent = (q) => {
+    setNavHistory(prev => [...prev, { page, sel }]);
+    setAgentQuery(q); setAgentResult(null); setSel(null); setPage("agent");
+  };
 
   const NAV = [
     {id:"dashboard",icon:"◈",label:"Dashboard"},
-    {id:"add",icon:"＋",label:"Submit Intelligence"},
-    {id:"database",icon:"▤",label:"All Intelligence",badge:rc||null},
-    {id:"report",icon:"◧",label:"Monthly Report"},
+    {id:"agent",icon:"◆",label:"Interact"},
+    {id:"database",icon:"▤",label:"Archive",badge:rc||null},
+    {id:"add",icon:"＋",label:"Drop Intel"},
+    {id:"learn",icon:"◎",label:"Academy"},
+    {id:"report",icon:"◧",label:"Briefing"},
     ...(user.role==="admin"?[{id:"admin",icon:"⚙",label:"Admin Panel"}]:[])
   ];
   const T = {
     dashboard:["AI Radar","Real-time intelligence overview"],
-    add:["Submit Intelligence","Share AI developments with the team"],
-    database:["Intelligence Database","All collected intelligence — reviewed and pending"],
+    add:["Drop Intel","Share AI developments with the team"],
+    database:["Archive","All collected intelligence — reviewed and pending"],
     detail:["Insight Detail","Full intelligence entry"],
-    report:["Report Generator","AI-powered monthly intelligence briefs"],
+    report:["Briefing","AI-powered monthly intelligence briefs"],
     admin:["Admin Panel","User management & system analytics"],
-    profile:["Your Profile","Researcher dashboard & activity"]
+    profile:["Your Profile","Researcher dashboard & activity"],
+    learn:["Academy","Curated resources & interactive AI tutor"],
+    agent:["Interact","Your all-in-one AI-powered hub assistant"]
   };
 
   if (loadingData) return (
@@ -2247,7 +3720,7 @@ export default function App() {
             onDrop={e=>{e.preventDefault();setDragOverDashboard(false);try{handleDragSubmit(JSON.parse(e.dataTransfer.getData('application/json')));}catch{}}}>
             {dragOverDashboard&&<div className="dashboard-drop-overlay"><div className="dashboard-drop-overlay-inner"><div className="dashboard-drop-overlay-icon">⬇</div><div className="dashboard-drop-overlay-text">Drop to auto-review</div><div className="dashboard-drop-overlay-sub">AI will extract &amp; summarize</div></div></div>}
             <SignalStreamPanel title="Core AI" signals={AI_SIGNALS} dbSignals={aiDbSignals} panelId="ai_signal" accentColor="#06d6e0" side="left" isAdmin={user.role==="admin"} onAddSignal={handleAddSignal} onDeleteSignal={id=>handleDeleteSignal(id,'ai_signal')} onBulkAddSignals={handleBulkAddSignals} onBulkDeleteSignals={handleBulkDeleteSignals} />
-            <div><Dashboard insights={data} onSelect={i=>{setSel(i);setPage("detail")}} onNavigateFiltered={navigateFiltered}/></div>
+            <div><Dashboard insights={data} onSelect={i=>navigate("detail",i)} onNavigateFiltered={navigateFiltered} onNavigateToAgent={navigateToAgent}/></div>
             <SignalStreamPanel title="Fin AI" signals={FIN_AI_SIGNALS} dbSignals={finDbSignals} panelId="financial_ai" accentColor="#10b981" side="right" isAdmin={user.role==="admin"} onAddSignal={handleAddSignal} onDeleteSignal={id=>handleDeleteSignal(id,'financial_ai')} onBulkAddSignals={handleBulkAddSignals} onBulkDeleteSignals={handleBulkDeleteSignals} />
             {/* Laptop overlay panels */}
             {(showLeftPanel||showRightPanel)&&<div className={`signal-panel-backdrop ${showLeftPanel||showRightPanel?"visible":""}`} onClick={()=>{setShowLeftPanel(false);setShowRightPanel(false)}}/>}
@@ -2262,8 +3735,8 @@ export default function App() {
           </div>}
           {page!=="dashboard"&&<>
           {page==="add"&&<AddInsight onAdd={i=>{setData(p=>[i,...p])}}/>}
-          {page==="database"&&<InsightsTable key={filterKey} insights={allIntelligence} onSelect={i=>{setSel(i);setPage("detail")}} initialFilters={dbFilters} isAdmin={user.role==="admin"} onBulkDelete={handleBulkDeleteInsights}/>}
-          {page==="detail"&&sel&&<InsightDetail insight={sel} isAdmin={user.role==="admin"} onBack={()=>setPage("database")} onUpdate={async u=>{
+          {page==="database"&&<InsightsTable key={filterKey} insights={allIntelligence} onSelect={i=>navigate("detail",i)} initialFilters={dbFilters} isAdmin={user.role==="admin"} onBulkDelete={handleBulkDeleteInsights}/>}
+          {page==="detail"&&sel&&<InsightDetail insight={sel} isAdmin={user.role==="admin"} onBack={goBack} onUpdate={async u=>{
             try {
               const updated = await api.updateInsight(u.id, u);
               setData(p=>p.map(i=>i.id===updated.id?updated:i));
@@ -2273,13 +3746,18 @@ export default function App() {
             try {
               await api.deleteInsight(id);
               setData(p=>p.filter(i=>i.id!==id));
+              // Go back but don't restore the deleted insight as sel
+              const prev = navHistory[navHistory.length - 1];
+              setNavHistory(h => h.slice(0, -1));
+              setPage(prev ? prev.page : "database");
               setSel(null);
-              setPage("database");
             } catch(err){ console.error('Delete failed:', err); throw err; }
           }}/>}
           {page==="report"&&<ReportGen insights={data}/>}
           {page==="admin"&&user.role==="admin"&&<AdminPanel insights={data} onRefresh={refreshData}/>}
           {page==="profile"&&<ProfilePage user={user}/>}
+          {page==="learn"&&<LearnAI isAdmin={user.role==="admin"} initialWeekId={learnWeekId} onBack={navHistory.length > 0 ? goBack : null}/>}
+          {page==="agent"&&<AIAgent insights={allIntelligence} learnResources={learnResources} query={agentQuery} result={agentResult} onQueryChange={setAgentQuery} onResultChange={setAgentResult} onNavigateToInsight={i=>navigate("detail",i)} onNavigateToLearn={weekId=>{setLearnWeekId(weekId||null);navigate("learn");}}/>}
           </>}
         </div>
       </div>

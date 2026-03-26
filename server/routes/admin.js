@@ -41,6 +41,24 @@ router.delete('/users/:id', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// PATCH /api/admin/users/:id/ai-limit — set daily token limit
+router.patch('/users/:id/ai-limit', requireAuth, requireAdmin, (req, res) => {
+  const limit = parseInt(req.body.limit);
+  if (!limit || limit < 1000) return res.status(400).json({ error: 'limit must be a number >= 1000' });
+  db.prepare('UPDATE users SET daily_token_limit = ? WHERE id = ?').run(limit, req.params.id);
+  const user = db.prepare('SELECT id, name, email, role, active, daily_token_limit, ai_blocked FROM users WHERE id = ?').get(req.params.id);
+  res.json({ user });
+});
+
+// PATCH /api/admin/users/:id/ai-blocked — block or unblock AI for a user
+router.patch('/users/:id/ai-blocked', requireAuth, requireAdmin, (req, res) => {
+  const { blocked } = req.body;
+  if (typeof blocked !== 'boolean') return res.status(400).json({ error: 'blocked must be boolean' });
+  db.prepare('UPDATE users SET ai_blocked = ? WHERE id = ?').run(blocked ? 1 : 0, req.params.id);
+  const user = db.prepare('SELECT id, name, email, role, active, daily_token_limit, ai_blocked FROM users WHERE id = ?').get(req.params.id);
+  res.json({ user });
+});
+
 // ─── STATS ──────────────────────────────────────────────────────────
 
 // GET /api/admin/stats
@@ -100,12 +118,20 @@ router.get('/activity', requireAuth, requireAdmin, (req, res) => {
     FROM reports ORDER BY generated_at DESC LIMIT 10
   `).all();
 
+  const aiActivity = db.prepare(`
+    SELECT type, CAST(id as TEXT) as ref_id,
+           CASE type WHEN 'agent' THEN 'AI Agent Query' WHEN 'learn' THEN 'Learn AI Chat' ELSE 'AI Summary' END as title,
+           actor, created_at as ts, tokens
+    FROM ai_logs WHERE type IN ('agent', 'learn')
+    ORDER BY created_at DESC LIMIT 30
+  `).all();
+
   const normalizeTs = ts =>
     ts && !ts.endsWith('Z') && !ts.includes('+') ? ts.replace(' ', 'T') + 'Z' : ts;
 
-  const feed = [...submissions, ...reviews, ...reports]
+  const feed = [...submissions, ...reviews, ...reports, ...aiActivity]
     .sort((a, b) => new Date(b.ts) - new Date(a.ts))
-    .slice(0, 30)
+    .slice(0, 50)
     .map(item => ({ ...item, ts: normalizeTs(item.ts) }));
 
   res.json({ activity: feed });

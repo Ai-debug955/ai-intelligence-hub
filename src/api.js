@@ -121,8 +121,11 @@ export async function updateInsight(id, updates) {
 }
 
 // ─── REPORTS ────────────────────────────────────────────────────────
-export async function generateReport() {
-  const res = await apiFetch('/reports/generate', { method: 'POST' });
+export async function generateReport(days = 30, categories = []) {
+  const res = await apiFetch('/reports/generate', {
+    method: 'POST',
+    body: JSON.stringify({ days, categories }),
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to generate report');
   return data.report;
@@ -277,6 +280,46 @@ export async function fetchAiUsageStats() {
   return data.stats;
 }
 
+export async function fetchMyAiUsage() {
+  const res = await apiFetch('/ai-usage/my-usage');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch AI usage');
+  return data;
+}
+
+export async function fetchAllUsersAiUsage() {
+  const res = await apiFetch('/ai-usage/all-users');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch all users AI usage');
+  return data.users;
+}
+
+export async function updateUserAiLimit(id, limit) {
+  const res = await apiFetch(`/admin/users/${id}/ai-limit`, {
+    method: 'PATCH', body: JSON.stringify({ limit }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update AI limit');
+  return data.user;
+}
+
+export async function updateUserAiBlocked(id, blocked) {
+  const res = await apiFetch(`/admin/users/${id}/ai-blocked`, {
+    method: 'PATCH', body: JSON.stringify({ blocked }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update AI block status');
+  return data.user;
+}
+
+// ─── AI AGENT ───────────────────────────────────────────────────────
+export async function agentQuery(query) {
+  const res = await apiFetch('/ai/agent', { method: 'POST', body: JSON.stringify({ query }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Agent query failed');
+  return data.answer;
+}
+
 // ─── PROFILE ────────────────────────────────────────────────────────
 export async function fetchProfile() {
   const res = await apiFetch('/profile');
@@ -302,4 +345,134 @@ export async function importAllData(payload) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to import data');
   return data;
+}
+
+// ─── LEARN STAGES ────────────────────────────────────────────────────
+export async function fetchStages() {
+  const res = await apiFetch('/learn/stages');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch stages');
+  return data;
+}
+
+export async function createStage(stage) {
+  const res = await apiFetch('/learn/stages', { method: 'POST', body: JSON.stringify(stage) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to create stage');
+  return data;
+}
+
+export async function updateStage(id, updates) {
+  const res = await apiFetch(`/learn/stages/${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update stage');
+  return data;
+}
+
+export async function deleteStage(id) {
+  const res = await apiFetch(`/learn/stages/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to delete stage');
+  return data;
+}
+
+export async function reorderStages(orderedIds) {
+  const res = await apiFetch('/learn/stages/reorder', { method: 'PATCH', body: JSON.stringify({ orderedIds }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to reorder stages');
+  return data;
+}
+
+// ─── LEARN WEEKS ─────────────────────────────────────────────────────
+export async function fetchWeeks(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+  const res = await apiFetch(`/learn/weeks?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch weeks');
+  return data.weeks;
+}
+
+export async function createWeek(week) {
+  const res = await apiFetch('/learn/weeks', { method: 'POST', body: JSON.stringify(week) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to create week');
+  return data.week;
+}
+
+export async function updateWeek(id, updates) {
+  const res = await apiFetch(`/learn/weeks/${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update week');
+  return data.week;
+}
+
+export async function deleteWeek(id) {
+  const res = await apiFetch(`/learn/weeks/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to delete week');
+  return data;
+}
+
+// ─── LEARN AI ───────────────────────────────────────────────────────
+export async function fetchLearnResources(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => { if (v && v !== 'All') params.set(k, v); });
+  const res = await apiFetch(`/learn/resources?${params}`);
+  let data;
+  try { data = await res.json(); } catch { throw new Error(`Server returned HTML instead of JSON (status ${res.status}) — restart the server`); }
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch resources');
+  return data.resources;
+}
+
+export async function addLearnResource(resource) {
+  const res = await apiFetch('/learn/resources', { method: 'POST', body: JSON.stringify(resource) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to add resource');
+  return data.resource;
+}
+
+export async function updateLearnResource(id, updates) {
+  const res = await apiFetch(`/learn/resources/${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update resource');
+  return data.resource;
+}
+
+export async function deleteLearnResource(id) {
+  const res = await apiFetch(`/learn/resources/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to delete resource');
+  return data;
+}
+
+// ─── LEARN CHAT (direct Groq call from frontend) ────────────────────
+const _GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const _GROQ_MODEL = 'llama-3.3-70b-versatile';
+const _LEVEL_PROMPTS = {
+  'Kid-friendly': 'Use very simple words like you are explaining to a 7-year-old child. Use fun analogies, short sentences, and avoid all jargon. Make it exciting and easy to understand.',
+  'Beginner': 'Use plain language and simple analogies. Avoid technical jargon. Assume no prior knowledge of AI, programming, or math.',
+  'Intermediate': 'Use standard technical terms but explain them clearly. Assume basic familiarity with programming and math concepts.',
+  'Advanced': 'Use precise technical terminology. Assume strong programming, math, and ML background. Go deep into implementation details and theory.',
+};
+export async function learnChat(messages, difficulty) {
+  const key = import.meta.env.VITE_GROQ_API_KEY;
+  if (!key) throw new Error('VITE_GROQ_API_KEY not set in .env');
+  const level = _LEVEL_PROMPTS[difficulty] || _LEVEL_PROMPTS['Beginner'];
+  const systemMsg = `You are a friendly, knowledgeable AI tutor specializing in artificial intelligence and machine learning. ${level} Answer clearly and in a structured way. If asked questions unrelated to AI/ML/tech, politely redirect the conversation back to AI topics.`;
+  const res = await fetch(_GROQ_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({ model: _GROQ_MODEL, temperature: 0.5, messages: [{ role: 'system', content: systemMsg }, ...messages] }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.status);
+    throw new Error(`Groq error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  const tokens = (data.usage?.prompt_tokens || 0) + (data.usage?.completion_tokens || 0);
+  if (tokens > 0) {
+    apiFetch('/ai-usage/log', { method: 'POST', body: JSON.stringify({ type: 'learn', tokens }) }).catch(() => {});
+  }
+  return data.choices?.[0]?.message?.content || 'No response received.';
 }
